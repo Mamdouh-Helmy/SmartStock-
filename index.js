@@ -23,7 +23,7 @@ const io = new Server(server, {
 
 const PORT = process.env.PORT || 5000;
 
-// ✅ إعداد CORS
+// إعداد CORS
 app.use(cors({
   origin: ['http://localhost:5173', 'https://stockmaster-4dbcc.web.app'], // السماح للموقع المحلي + موقع Firebase
   credentials: true,
@@ -31,16 +31,16 @@ app.use(cors({
 
 app.use(express.json());
 
-// ✅ التحقق من متغيرات البيئة
+// التحقق من متغيرات البيئة
 if (!process.env.JWT_SECRET || !process.env.MONGODB_URI) {
-  console.error('❌ خطأ: تأكد من إعداد المتغيرات البيئية في ملف .env');
+  console.error('خطأ: تأكد من إعداد المتغيرات البيئية في ملف .env');
   process.exit(1);
 }
 
-// ✅ الاتصال بقاعدة بيانات MongoDB
+// الاتصال بقاعدة بيانات MongoDB
 connectDB();
 
-// ✅ ربط المسارات
+// ربط المسارات
 app.use('/api/auth', authRoutes);
 app.use('/api/sales', saleRoutes);
 app.use('/api/purchases', purchaseRoutes);
@@ -49,22 +49,22 @@ app.use('/api/clients-suppliers', clientSupplierRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/invoices', invoiceRoutes); // إضافة مسار الفواتير
 
-// ✅ إعداد Socket.IO
+// إعداد Socket.IO
 io.on('connection', (socket) => {
-  console.log('⚡ عميل متصل');
-
-  // استقبال حدث "newSale" من العميل
+  console.log('عميل متصل');
+  
+  // مثال على حدث من العميل
   socket.on('newSale', (data) => {
-    console.log('✅ تم إضافة عملية بيع جديدة:', data);
+    console.log('تم إضافة عملية بيع جديدة:', data);
     io.emit('saleAdded', { message: 'تم إضافة عملية بيع جديدة', sale: data }); // إرسال إشعار للجميع
   });
 
   socket.on('disconnect', () => {
-    console.log('❌ العميل مفصول');
+    console.log('العميل مفصول');
   });
 });
 
-// ✅ تشغيل الخادم مع Socket.IO ومنع الإغلاق التلقائي
-server.listen(PORT, "0.0.0.0", () => {
-  console.log(`🚀 Server is running on port ${PORT}`);
+// بدء تشغيل الخادم مع Socket.IO
+server.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
 });

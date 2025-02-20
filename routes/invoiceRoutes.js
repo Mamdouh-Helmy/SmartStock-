@@ -1,5 +1,5 @@
 const puppeteer = require("puppeteer-core"); // استخدام puppeteer-core
-const chromium = require("@sparticuz/chromium"); // استخدام Chromium الخفيف
+const chromium = require("@sparticuz/chromium"); // استخدام Chromium الخفيف المتوافق مع Railway
 const path = require("path");
 const fs = require("fs");
 const express = require("express");
@@ -109,6 +109,7 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
 `;
 
     // **🔹 تشغيل Puppeteer مع Chromium المتوافق**
+    console.log("🚀 بدء تشغيل Puppeteer...");
     const browser = await puppeteer.launch({
       headless: chromium.headless,
       executablePath: await chromium.executablePath(), // استخدام Chromium المتوافق
@@ -116,13 +117,16 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
     });
 
     const page = await browser.newPage();
-    await page.setContent(htmlContent);
+    await page.setContent(htmlContent, { waitUntil: "load" });
+
+    console.log("📄 إنشاء ملف PDF...");
     const pdfBuffer = await page.pdf({
       format: "A4",
       printBackground: true,
     });
 
     await browser.close();
+    console.log("✅ تم إنشاء PDF بنجاح!");
 
     // **🔹 التأكد من وجود مجلد `invoices`**
     const invoicesDir = path.join(__dirname, "../invoices");

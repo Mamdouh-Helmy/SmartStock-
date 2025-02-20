@@ -16,17 +16,19 @@ const app = express();
 const server = http.createServer(app); // استخدام http server لتشغيل Socket.IO
 const io = new Server(server, {
   cors: {
-    origin: 'http://localhost:5173', // السماح للفرونت إند بالوصول
+    origin: ['http://localhost:5173', 'https://stockmaster-4dbcc.web.app'], // السماح للموقع المحلي + موقع Firebase
     methods: ['GET', 'POST'],
   },
 });
+
 const PORT = process.env.PORT || 5000;
 
 // إعداد CORS
 app.use(cors({
-  origin: 'http://localhost:5173', // السماح للفرونت إند بالوصول
+  origin: ['http://localhost:5173', 'https://stockmaster-4dbcc.web.app'], // السماح للموقع المحلي + موقع Firebase
   credentials: true,
 }));
+
 app.use(express.json());
 
 // التحقق من متغيرات البيئة

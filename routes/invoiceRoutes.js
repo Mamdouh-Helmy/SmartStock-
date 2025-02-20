@@ -1,4 +1,5 @@
-const puppeteer = require("puppeteer");
+const puppeteer = require("puppeteer-core"); // استخدام puppeteer-core
+const chromium = require("@sparticuz/chromium"); // استخدام Chromium الخفيف
 const path = require("path");
 const fs = require("fs");
 const express = require("express");
@@ -107,12 +108,12 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
   </html>
 `;
 
-    // **🔹 تشغيل Puppeteer مع التعديلات الجديدة**
+    // **🔹 تشغيل Puppeteer مع Chromium المتوافق**
     const browser = await puppeteer.launch({
-      headless: "new", // تحسين الأداء وتجنب مشاكل الإصدارات الحديثة
-      args: ['--no-sandbox', '--disable-setuid-sandbox'], // تعطيل Sandbox لتجنب مشاكل Railway
+      headless: chromium.headless,
+      executablePath: await chromium.executablePath(), // استخدام Chromium المتوافق
+      args: chromium.args,
     });
-    
 
     const page = await browser.newPage();
     await page.setContent(htmlContent);

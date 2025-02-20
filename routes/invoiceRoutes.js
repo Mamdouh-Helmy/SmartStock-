@@ -1,4 +1,4 @@
-const puppeteer = require("puppeteer");
+const puppeteer = require("puppeteer-core"); // استخدام puppeteer-core
 const path = require("path");
 const fs = require("fs");
 const express = require("express");
@@ -91,7 +91,7 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
         <tbody>
           ${sale.products
             .map(
-              (product) => `
+              (product) => ` 
             <tr>
               <td>${product.productName}</td>
               <td>${product.quantity}</td>
@@ -107,8 +107,13 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
   </html>
 `;
 
-    // تشغيل Puppeteer لإنشاء PDF
-    const browser = await puppeteer.launch();
+    // **🔹 تشغيل Puppeteer مع التعديلات الجديدة**
+    const browser = await puppeteer.launch({
+      headless: true, // تشغيل المتصفح بدون واجهة
+      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium', // استخدام Chromium من النظام
+      args: ['--no-sandbox', '--disable-setuid-sandbox'], // تعطيل Sandbox لتجنب المشاكل
+    });
+
     const page = await browser.newPage();
     await page.setContent(htmlContent);
     const pdfBuffer = await page.pdf({
@@ -118,7 +123,7 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
 
     await browser.close();
 
-    // التأكد من وجود مجلد `invoices`
+    // **🔹 التأكد من وجود مجلد `invoices`**
     const invoicesDir = path.join(__dirname, "../invoices");
     if (!fs.existsSync(invoicesDir)) {
       fs.mkdirSync(invoicesDir, { recursive: true });
@@ -127,7 +132,7 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
     const filePath = path.join(invoicesDir, `invoice_${saleId}.pdf`);
     fs.writeFileSync(filePath, pdfBuffer);
 
-    // إرسال الفاتورة للتحميل
+    // **🔹 إرسال الفاتورة للتحميل**
     res.setHeader(
       "Content-Disposition",
       `attachment; filename=invoice_${saleId}.pdf`
@@ -135,7 +140,7 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
     res.setHeader("Content-Type", "application/pdf");
     res.download(filePath);
   } catch (err) {
-    console.error(err);
+    console.error("❌ خطأ أثناء إنشاء الفاتورة:", err);
     res.status(500).json({ message: "خطأ في إنشاء الفاتورة" });
   }
 });

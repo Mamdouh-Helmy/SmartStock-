@@ -3,16 +3,13 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node index.js",
-    "postinstall": "echo 'Skipping Chromium download'"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "@sparticuz/chromium": "^132.0.0",
     "bcryptjs": "^2.4.3",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
@@ -23,7 +20,7 @@
     "jspdf-autotable": "^3.8.4",
     "mongoose": "^8.9.6",
     "morgan": "^1.10.0",
-    "puppeteer-core": "^24.2.1",
+    "puppeteer": "^24.1.1",
     "socket.io": "^4.8.1"
   },
   "devDependencies": {

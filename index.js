@@ -68,6 +68,3 @@ io.on('connection', (socket) => {
 server.listen(PORT, "0.0.0.0", () => {
   console.log(`🚀 Server is running on port ${PORT}`);
 });
-
-// ✅ منع Railway من إيقاف السيرفر تلقائيًا
-process.stdin.resume();

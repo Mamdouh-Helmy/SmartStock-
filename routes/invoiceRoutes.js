@@ -1,4 +1,4 @@
-const puppeteer = require("puppeteer-core"); // استخدام puppeteer-core
+const puppeteer = require("puppeteer");
 const path = require("path");
 const fs = require("fs");
 const express = require("express");
@@ -109,10 +109,10 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
 
     // **🔹 تشغيل Puppeteer مع التعديلات الجديدة**
     const browser = await puppeteer.launch({
-      headless: true, // تشغيل المتصفح بدون واجهة
-      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium', // استخدام Chromium من النظام
-      args: ['--no-sandbox', '--disable-setuid-sandbox'], // تعطيل Sandbox لتجنب المشاكل
+      headless: "new", // تحسين الأداء وتجنب مشاكل الإصدارات الحديثة
+      args: ['--no-sandbox', '--disable-setuid-sandbox'], // تعطيل Sandbox لتجنب مشاكل Railway
     });
+    
 
     const page = await browser.newPage();
     await page.setContent(htmlContent);

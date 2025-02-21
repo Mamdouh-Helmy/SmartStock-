@@ -58,7 +58,6 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
           margin: 12px 0; 
           display: block; 
           line-height: 2.1;
-          letter-spacing: -1px;
         }
         p {
           font-size: 23px;
@@ -81,10 +80,19 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
     <body>
       <div class="title emoji">🧾 فاتورة بيع</div>
       <div class="header">
-        <p class="emoji">📌 رقم الفاتورة: ${invoiceNumber}</p>
-        <p class="emoji">📅 التاريخ: ${formattedDate}</p>
-        <p class="emoji">⏰ الوقت: ${formattedTime}</p>
-        <p class="emoji">👤 اسم العميل: ${sale.customerName}</p>
+       <p class="emoji">
+  <span>📌 رقم الفاتورة:</span> <span>${invoiceNumber}</span>
+</p>
+<p class="emoji">
+  <span>📅 التاريخ:</span> <span>${formattedDate}</span>
+</p>
+<p class="emoji">
+  <span>⏰ الوقت:</span> <span>${formattedTime}</span>
+</p>
+<p class="emoji">
+  <span>👤 اسم العميل:</span> <span>${sale.customerName}</span>
+</p>
+
       </div>
       <table class="table">
         <thead>

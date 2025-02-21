@@ -16,7 +16,8 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
     }
 
     const saleDate = new Date(sale.saleDate);
-    const formattedDate = `${saleDate.getDate()}/${saleDate.getMonth() + 1}/${saleDate.getFullYear()}`;
+    const formattedDate = `${saleDate.getDate()}/${saleDate.getMonth() + 1
+      }/${saleDate.getFullYear()}`;
     const formattedTime = `${saleDate.getHours()}:${saleDate.getMinutes()}:${saleDate.getSeconds()}`;
 
     const invoiceNumber = `#${saleId}`;
@@ -46,9 +47,17 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
           text-align: center;
           margin-top: 60px;
         }
-        .header {
-          font-size: 18px;
-          margin: 10px 0;
+        .header{
+          width: 90%;
+          margin-top: 20px;
+          margin-left: auto;
+          margin-right: auto;
+        }
+        .header p {
+          font-size: 16px; 
+          margin: 12px 0; 
+          display: inline-block; 
+          line-height: 1.2;
         }
         p {
           font-size: 23px;
@@ -69,7 +78,7 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
       </style>
     </head>
     <body>
-      <div class="title">🧾 فاتورة بيع</div>
+      <div class="title emoji">🧾 فاتورة بيع</div>
       <div class="header">
         <p class="emoji">📌 رقم الفاتورة: ${invoiceNumber}</p>
         <p class="emoji">📅 التاريخ: ${formattedDate}</p>
@@ -87,8 +96,8 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
         </thead>
         <tbody>
           ${sale.products
-            .map(
-              (product) => ` 
+        .map(
+          (product) => ` 
             <tr>
               <td>${product.productName}</td>
               <td>${product.quantity}</td>
@@ -96,8 +105,8 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
               <td>${product.quantity * product.price} جنيه</td>
             </tr>
           `
-            )
-            .join("")}
+        )
+        .join("")}
         </tbody>
       </table>
     </body>

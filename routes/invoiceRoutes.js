@@ -16,8 +16,9 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
     }
 
     const saleDate = new Date(sale.saleDate);
-    const formattedDate = `${saleDate.getDate()}/${saleDate.getMonth() + 1
-      }/${saleDate.getFullYear()}`;
+    const formattedDate = `${saleDate.getDate()}/${
+      saleDate.getMonth() + 1
+    }/${saleDate.getFullYear()}`;
     const formattedTime = `${saleDate.getHours()}:${saleDate.getMinutes()}:${saleDate.getSeconds()}`;
 
     const invoiceNumber = `#${saleId}`;
@@ -59,17 +60,13 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
           display: block; 
           line-height: 2.1;
         }
-          .header p {
-  font-family: 'Amiri', serif;
-}
-.header p span {
-  font-family: 'Arial', sans-serif;
-}
-.emoji span {
-  display: inline;
-  letter-spacing: -1px;
-}
-
+        .header p .two {
+          font-family: 'Arial', sans-serif;
+        }
+        .emoji span {
+          display: inline;
+          letter-spacing: -1px;
+        }
         p {
           font-size: 23px;
         }
@@ -92,16 +89,16 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
       <div class="title emoji">🧾 فاتورة بيع</div>
       <div class="header">
        <p class="emoji">
-  <span>📌 رقم الفاتورة:</span> <span>${invoiceNumber}</span>
+  <span>📌 رقم الفاتورة:</span> <span class="two">${invoiceNumber}</span>
 </p>
 <p class="emoji">
-  <span>📅 التاريخ:</span> <span>${formattedDate}</span>
+  <span>📅 التاريخ:</span> <span  class="two">${formattedDate}</span>
 </p>
 <p class="emoji">
-  <span>⏰ الوقت:</span> <span>${formattedTime}</span>
+  <span>⏰ الوقت:</span> <span  class="two">${formattedTime}</span>
 </p>
 <p class="emoji">
-  <span>👤 اسم العميل:</span> <span>${sale.customerName}</span>
+  <span>👤 اسم العميل:</span> <span  class="two">${sale.customerName}</span>
 </p>
 
       </div>
@@ -116,8 +113,8 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
         </thead>
         <tbody>
           ${sale.products
-        .map(
-          (product) => ` 
+            .map(
+              (product) => ` 
             <tr>
               <td>${product.productName}</td>
               <td>${product.quantity}</td>
@@ -125,8 +122,8 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
               <td>${product.quantity * product.price} جنيه</td>
             </tr>
           `
-        )
-        .join("")}
+            )
+            .join("")}
         </tbody>
       </table>
     </body>

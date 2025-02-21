@@ -1,5 +1,5 @@
-const puppeteer = require("puppeteer-core"); // استخدام puppeteer-core
-const chromium = require("@sparticuz/chromium"); // استخدام Chromium الخفيف المتوافق مع Railway
+const puppeteer = require("puppeteer-core");
+const chromium = require("@sparticuz/chromium");
 const path = require("path");
 const fs = require("fs");
 const express = require("express");
@@ -15,21 +15,17 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
       return res.status(404).json({ message: "العملية غير موجودة" });
     }
 
-    // تنسيق التاريخ والوقت
     const saleDate = new Date(sale.saleDate);
-    const formattedDate = `${saleDate.getDate()}/${
-      saleDate.getMonth() + 1
-    }/${saleDate.getFullYear()}`;
+    const formattedDate = `${saleDate.getDate()}/${saleDate.getMonth() + 1}/${saleDate.getFullYear()}`;
     const formattedTime = `${saleDate.getHours()}:${saleDate.getMinutes()}:${saleDate.getSeconds()}`;
 
-    // **توليد رقم فاتورة مختصر**
     const invoiceNumber = `#${saleId}`;
 
-    // إعداد HTML مع الإيموجي
     const htmlContent = `
   <html lang="ar">
     <head>
       <meta charset="UTF-8">
+      <link href="https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&display=swap" rel="stylesheet">
       <style>
         * {
           margin: 0;
@@ -43,7 +39,7 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
           font-size: 18px;
         }
         .emoji {
-          font-family: 'NotoColorEmoji', sans-serif;
+          font-family: 'Noto Color Emoji', sans-serif;
         }
         .title {
           font-size: 30px;
@@ -75,10 +71,10 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
     <body>
       <div class="title">🧾 فاتورة بيع</div>
       <div class="header">
-        <p>📌 رقم الفاتورة: ${invoiceNumber}</p>
-        <p>📅 التاريخ: ${formattedDate}</p>
-        <p>⏰ الوقت: ${formattedTime}</p>
-        <p>👤 اسم العميل: ${sale.customerName}</p>
+        <p class="emoji">📌 رقم الفاتورة: ${invoiceNumber}</p>
+        <p class="emoji">📅 التاريخ: ${formattedDate}</p>
+        <p class="emoji">⏰ الوقت: ${formattedTime}</p>
+        <p class="emoji">👤 اسم العميل: ${sale.customerName}</p>
       </div>
       <table class="table">
         <thead>
@@ -108,11 +104,10 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
   </html>
 `;
 
-    // **🔹 تشغيل Puppeteer مع Chromium المتوافق**
     console.log("🚀 بدء تشغيل Puppeteer...");
     const browser = await puppeteer.launch({
       headless: chromium.headless,
-      executablePath: await chromium.executablePath(), // استخدام Chromium المتوافق
+      executablePath: await chromium.executablePath(),
       args: chromium.args,
     });
 
@@ -128,7 +123,6 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
     await browser.close();
     console.log("✅ تم إنشاء PDF بنجاح!");
 
-    // **🔹 التأكد من وجود مجلد `invoices`**
     const invoicesDir = path.join(__dirname, "../invoices");
     if (!fs.existsSync(invoicesDir)) {
       fs.mkdirSync(invoicesDir, { recursive: true });
@@ -137,7 +131,6 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
     const filePath = path.join(invoicesDir, `invoice_${saleId}.pdf`);
     fs.writeFileSync(filePath, pdfBuffer);
 
-    // **🔹 إرسال الفاتورة للتحميل**
     res.setHeader(
       "Content-Disposition",
       `attachment; filename=invoice_${saleId}.pdf`

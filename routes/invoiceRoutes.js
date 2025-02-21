@@ -65,7 +65,7 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
         }
         .emoji span {
           display: inline;
-          letter-spacing: -1px;
+          letter-spacing: 2px;
         }
         p {
           font-size: 23px;

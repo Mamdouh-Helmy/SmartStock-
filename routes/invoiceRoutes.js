@@ -59,6 +59,17 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
           display: block; 
           line-height: 2.1;
         }
+          .header p {
+  font-family: 'Amiri', serif;
+}
+.header p span {
+  font-family: 'Arial', sans-serif;
+}
+.emoji span {
+  display: inline;
+  letter-spacing: -1px;
+}
+
         p {
           font-size: 23px;
         }

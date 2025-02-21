@@ -56,8 +56,8 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
         .header p {
           font-size: 16px; 
           margin: 12px 0; 
-          display: inline-block; 
-          line-height: 1.2;
+          display: block; 
+          line-height: 0.6;
         }
         p {
           font-size: 23px;

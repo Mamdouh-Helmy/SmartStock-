@@ -3,7 +3,9 @@ const bcrypt = require('bcryptjs');
 const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
+const authenticateToken = require("../middleware/authMiddleware");
 
+// ✅ تسجيل الدخول (بدون `authenticateToken`)
 router.post('/login', async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -23,8 +25,12 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ message: 'كلمة المرور غير صحيحة' });
     }
 
-    // إنشاء توكن JWT عند نجاح تسجيل الدخول
-    const token = jwt.sign({ username: user.username }, process.env.JWT_SECRET, { expiresIn: '24h' });
+    // ✅ إنشاء توكن JWT عند نجاح تسجيل الدخول
+    const token = jwt.sign(
+      { username: user.username, id: user._id },
+      process.env.JWT_SECRET,
+      { expiresIn: '24h' }
+    );
 
     console.log('✅ تم تسجيل الدخول بنجاح');
     return res.json({ message: 'تم تسجيل الدخول بنجاح', token });
@@ -32,6 +38,11 @@ router.post('/login', async (req, res) => {
     console.error('❌ حدث خطأ أثناء تسجيل الدخول:', error);
     return res.status(500).json({ message: 'حدث خطأ أثناء تسجيل الدخول' });
   }
+});
+
+// ✅ مسار للتحقق من التوكن
+router.get("/verifyToken", authenticateToken, (req, res) => {
+  res.json({ message: "التوكن صالح", user: req.user });
 });
 
 module.exports = router;

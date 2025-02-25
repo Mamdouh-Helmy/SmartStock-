@@ -21,8 +21,8 @@ router.post('/login', async (req, res) => {
     }
 
     // تحديد مدة انتهاء التوكن (15 يومًا)
-    const expiresIn = 60; // 60 ثانية = 1 دقيقة
-    const expirationDate = Date.now() + expiresIn * 1000; 
+    const expiresIn = 15 * 24 * 60 * 60; // 15 يوم × 24 ساعة × 60 دقيقة × 60 ثانية
+    const expirationDate = Date.now() + expiresIn * 1000; // تحويله إلى ملي ثانية
 
     // توليد التوكن مع تاريخ انتهاء الصلاحية
     const token = jwt.sign({ username: user.username }, process.env.JWT_SECRET, { expiresIn: '15d' });

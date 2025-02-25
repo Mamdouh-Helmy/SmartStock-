@@ -16,18 +16,23 @@ router.post('/login', async (req, res) => {
 
     // التحقق من كلمة المرور
     const passwordMatch = await bcrypt.compare(password, user.password);
-    console.log('🔹 نتيجة مقارنة كلمة المرور:', passwordMatch);
-
     if (!passwordMatch) {
-      console.log('❌ كلمة المرور غير صحيحة');
       return res.status(401).json({ message: 'كلمة المرور غير صحيحة' });
     }
 
-    // إنشاء توكن JWT عند نجاح تسجيل الدخول
-    const token = jwt.sign({ username: user.username }, process.env.JWT_SECRET, { expiresIn: '24h' });
+    // تحديد مدة انتهاء التوكن (15 يومًا)
+    const expiresIn = 15 * 24 * 60 * 60; // 15 يوم × 24 ساعة × 60 دقيقة × 60 ثانية
+    const expirationDate = Date.now() + expiresIn * 1000; // تحويله إلى ملي ثانية
 
-    console.log('✅ تم تسجيل الدخول بنجاح');
-    return res.json({ message: 'تم تسجيل الدخول بنجاح', token });
+    // توليد التوكن مع تاريخ انتهاء الصلاحية
+    const token = jwt.sign({ username: user.username }, process.env.JWT_SECRET, { expiresIn: '15d' });
+
+    return res.json({ 
+      message: 'تم تسجيل الدخول بنجاح', 
+      token, 
+      expiresAt: expirationDate 
+    });
+
   } catch (error) {
     console.error('❌ حدث خطأ أثناء تسجيل الدخول:', error);
     return res.status(500).json({ message: 'حدث خطأ أثناء تسجيل الدخول' });
@@ -35,3 +40,4 @@ router.post('/login', async (req, res) => {
 });
 
 module.exports = router;
+

@@ -52,7 +52,6 @@ router.post('/addClientSupplier', authenticateToken, async (req, res) => {
   }
 });
 
-
 router.get('/', authenticateToken, async (req, res) => {
   try {
     const clientsSuppliers = await ClientSupplier.find();

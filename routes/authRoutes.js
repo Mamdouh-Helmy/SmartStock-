@@ -30,7 +30,7 @@ router.post('/login', async (req, res) => {
     return res.json({ 
       message: 'تم تسجيل الدخول بنجاح', 
       token, 
-      expiresAt: expirationDate 
+      expiresAt: expirationDate
     });
 
   } catch (error) {

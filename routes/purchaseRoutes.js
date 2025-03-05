@@ -30,16 +30,18 @@ router.post("/addPurchase", authenticateToken, async (req, res) => {
   }
 
   try {
+    // معالجة المنتجات وحساب totalAmount لكل منتج
     const processedProducts = products.map((product) => {
       if (!product.productName || !product.quantity || !product.price) {
         throw new Error("يجب ملء جميع بيانات المنتج (الاسم، الكمية، السعر)");
       }
       return {
         ...product,
-        totalAmount: Number(product.quantity) * Number(product.price), // حساب المبلغ الإجمالي
+        totalAmount: Number(product.quantity) * Number(product.price),
       };
     });
 
+    // تحديث المخزون: زيادة الكميات للمنتجات المشترى
     const bulkOperations = await Promise.all(
       processedProducts.map(async (product) => {
         const existingInventory = await Inventory.findOne({
@@ -66,9 +68,9 @@ router.post("/addPurchase", authenticateToken, async (req, res) => {
     );
 
     await Inventory.bulkWrite(bulkOperations);
-
     const updatedInventory = await Inventory.find();
 
+    // إنشاء عملية الشراء وحفظها
     const newPurchase = new Purchase({
       supplierName,
       products: processedProducts,
@@ -76,33 +78,22 @@ router.post("/addPurchase", authenticateToken, async (req, res) => {
     });
     await newPurchase.save();
 
-    // تحديث رصيد المورد وإضافة العملية إلى transactions
+    // تحديث سجل المورد: تقليل الرصيد وإضافة معاملة شراء جديدة
     const supplier = await ClientSupplier.findOne({ name: supplierName });
     if (supplier) {
       const totalAmount = processedProducts.reduce(
         (total, product) => total + product.totalAmount,
         0
-      ); // مجموع المبالغ الإجمالية
+      );
       supplier.balance -= totalAmount; // تقليل الرصيد للمورد
 
-      const allPurchases = await Purchase.find({ supplierName }).sort({
-        purchaseDate: -1,
+      supplier.transactions.push({
+        type: "purchase",
+        amount: totalAmount,
+        date: new Date(),
+        details: processedProducts,
+        purchaseId: newPurchase._id,
       });
-
-      if (allPurchases.length > 0) {
-        let accumulatedAmount = 0;
-
-        allPurchases.forEach((purchase) => {
-          purchase.products.forEach((product) => {
-            accumulatedAmount += Number(product.price);
-            supplier.transactions.push({
-              type: "purchase",
-              amount: accumulatedAmount,
-              date: new Date(),
-            });
-          });
-        });
-      }
 
       await supplier.save();
     }
@@ -118,30 +109,25 @@ router.post("/addPurchase", authenticateToken, async (req, res) => {
   }
 });
 
+
 // حذف عملية شراء
 router.delete("/:id", authenticateToken, async (req, res) => {
   try {
     const purchase = await Purchase.findById(req.params.id);
     if (!purchase) {
-      return res
-        .status(404)
-        .json({ message: "لم يتم العثور على عملية الشراء" });
+      return res.status(404).json({ message: "لم يتم العثور على عملية الشراء" });
     }
-
     const products = purchase.products;
 
-    // تحديث المخزون قبل حذف الشراء
+    // تحديث المخزون: تقليل الكميات بناءً على عملية الشراء المحذوفة
     await Promise.all(
       products.map(async (product) => {
         const existingInventory = await Inventory.findOne({
           productName: product.productName,
         });
-
         if (existingInventory) {
           const newQuantity = existingInventory.quantity - product.quantity;
-
           if (newQuantity > 0) {
-            // تحديث الكمية فقط إذا لم تصل إلى 0
             await Inventory.updateOne(
               { productName: product.productName },
               {
@@ -150,65 +136,37 @@ router.delete("/:id", authenticateToken, async (req, res) => {
               }
             );
           } else {
-            // حذف المنتج من المخزون إذا وصلت الكمية إلى 0
             await Inventory.deleteOne({ productName: product.productName });
           }
         }
       })
     );
 
-    // تحديث رصيد المورد
-    const supplier = await ClientSupplier.findOne({
-      name: purchase.supplierName,
-    });
+    // تحديث سجل المورد: إعادة الرصيد وحذف المعاملة المرتبطة بالشراء
+    const supplier = await ClientSupplier.findOne({ name: purchase.supplierName });
     if (supplier) {
       const totalAmount = products.reduce(
         (total, product) => total + product.totalAmount,
         0
       );
-      supplier.balance += totalAmount; // إرجاع الرصيد إلى قيمته الأصلية
+      supplier.balance += totalAmount; // إعادة الرصيد
 
-      // جلب جميع المشتريات السابقة للمورد (باستثناء العملية التي يتم حذفها)
-      const allPurchases = await Purchase.find({
-        supplierName: purchase.supplierName,
-        _id: { $ne: purchase._id }, // استبعاد العملية التي يتم حذفها
-      }).sort({ purchaseDate: -1 });
-
-      let accumulatedAmount = 0;
-
-      // إعادة حساب المجموع التراكمي لجميع المشتريات المتبقية
-      allPurchases.forEach((purchase) => {
-        purchase.products.forEach((product) => {
-          accumulatedAmount += Number(product.price);
-        });
-      });
-
-      // إزالة جميع العمليات القديمة من نوع "purchase"
       supplier.transactions = supplier.transactions.filter(
-        (transaction) => transaction.type !== "purchase"
+        (tx) => String(tx.purchaseId) !== String(purchase._id)
       );
-
-      // إضافة عملية جديدة مع المجموع التراكمي
-      supplier.transactions.push({
-        type: "purchase",
-        amount: accumulatedAmount,
-        date: new Date(),
-      });
 
       await supplier.save();
     }
 
     // حذف عملية الشراء من قاعدة البيانات
     await Purchase.findByIdAndDelete(req.params.id);
-
-    res
-      .status(200)
-      .json({ message: "تم حذف عملية الشراء وتحديث المخزون بنجاح" });
+    res.status(200).json({ message: "تم حذف عملية الشراء وتحديث المخزون بنجاح" });
   } catch (err) {
     console.error("حدث خطأ أثناء حذف عملية الشراء:", err);
     res.status(500).json({ message: "حدث خطأ أثناء حذف عملية الشراء" });
   }
 });
+
 
 // تعديل عملية شراء
 router.put("/:id", authenticateToken, async (req, res) => {
@@ -223,22 +181,17 @@ router.put("/:id", authenticateToken, async (req, res) => {
   try {
     const existingPurchase = await Purchase.findById(req.params.id);
     if (!existingPurchase) {
-      return res
-        .status(404)
-        .json({ message: "لم يتم العثور على عملية الشراء" });
+      return res.status(404).json({ message: "لم يتم العثور على عملية الشراء" });
     }
-
     const oldProducts = existingPurchase.products;
 
-    // إرجاع الكميات القديمة إلى المخزون وتحديث الأسماء إن لزم
+    // إعادة الكميات القديمة إلى المخزون
     await Promise.all(
       oldProducts.map(async (oldProduct) => {
         const existingInventory = await Inventory.findOne({
           productName: oldProduct.productName,
         });
-
         if (existingInventory) {
-          // طرح الكمية القديمة
           await Inventory.updateOne(
             { productName: oldProduct.productName },
             {
@@ -254,115 +207,84 @@ router.put("/:id", authenticateToken, async (req, res) => {
       })
     );
 
-    // تحديث المنتجات الجديدة في المخزون
+    // معالجة المنتجات الجديدة وحساب totalAmount
+    const processedProducts = products.map((product) => {
+      if (!product.productName || !product.quantity || !product.price) {
+        throw new Error("جميع الحقول الخاصة بالمنتج مطلوبة");
+      }
+      return {
+        ...product,
+        totalAmount: Number(product.quantity) * Number(product.price),
+      };
+    });
+
+    // تحديث المخزون للمنتجات الجديدة
     await Promise.all(
-      products.map(async (newProduct) => {
+      processedProducts.map(async (newProduct) => {
         const { productName, quantity, price } = newProduct;
-        if (!productName || !quantity || !price) {
-          throw new Error("جميع الحقول الخاصة بالمنتج مطلوبة");
-        }
-
-        const totalAmount = quantity * price;
-        newProduct.totalAmount = totalAmount;
-
         const existingInventory = await Inventory.findOne({ productName });
-
         if (existingInventory) {
-          // تحديث الكمية والسعر فقط إذا كان المنتج موجودًا بالفعل
           await Inventory.updateOne(
             { productName },
             {
               $inc: { quantity: quantity },
               $set: {
-                price,
-                totalValue: (existingInventory.quantity + quantity) * price,
+                price: Number(price),
+                totalValue: (existingInventory.quantity + quantity) * Number(price),
                 year: new Date().getFullYear(),
               },
             }
           );
         } else {
-          // البحث عن المنتج القديم وتحديث اسمه بدلاً من إضافة سجل جديد
-          const oldProduct = oldProducts.find(
-            (p) => p.productName !== productName
-          );
-
-          if (oldProduct) {
-            await Inventory.updateOne(
-              { productName: oldProduct.productName }, // البحث بالاسم القديم
-              {
-                $set: {
-                  productName,
-                  quantity,
-                  price,
-                  totalValue: quantity * price,
-                  year: new Date().getFullYear(),
-                },
-              }
-            );
-          } else {
-            // إذا لم يكن المنتج القديم موجودًا، يتم إنشاء سجل جديد
-            await Inventory.create({
-              productName,
-              quantity,
-              price,
-              totalValue: quantity * price,
-              year: new Date().getFullYear(),
-            });
-          }
+          await Inventory.create({
+            productName,
+            quantity,
+            price,
+            totalValue: quantity * price,
+            year: new Date().getFullYear(),
+          });
         }
       })
     );
 
-    // تحديث بيانات الشراء في قاعدة البيانات
+    // تحديث عملية الشراء في قاعدة البيانات
     const updatedPurchase = await Purchase.findByIdAndUpdate(
       req.params.id,
-      { supplierName, products },
+      { supplierName, products: processedProducts },
       { new: true, runValidators: true }
     );
 
-    // تحديث رصيد المورد
+    // تحديث سجل المورد: حساب الفرق وتحديث المعاملة المرتبطة
     const supplier = await ClientSupplier.findOne({ name: supplierName });
     if (supplier) {
       const oldTotalAmount = oldProducts.reduce(
         (total, product) => total + product.totalAmount,
         0
       );
-      const newTotalAmount = products.reduce(
+      const newTotalAmount = processedProducts.reduce(
         (total, product) => total + product.totalAmount,
         0
       );
       const difference = newTotalAmount - oldTotalAmount;
+      supplier.balance -= difference; // لأن شراء المورد يقلل الرصيد
 
-      supplier.balance -= difference; // تحديث الرصيد بناءً على الفرق
-
-      // جلب جميع المشتريات السابقة للمورد
-      const allPurchases = await Purchase.find({ supplierName }).sort({
-        purchaseDate: -1,
-      });
-
-      if (allPurchases.length > 0) {
-        let accumulatedAmount = 0;
-
-        // إعادة حساب المجموع التراكمي لجميع المشتريات
-        allPurchases.forEach((purchase) => {
-          purchase.products.forEach((product) => {
-            accumulatedAmount += Number(product.price);
-          });
-        });
-
-        // إزالة العمليات القديمة
-        supplier.transactions = supplier.transactions.filter(
-          (transaction) => transaction.type !== "purchase"
-        );
-
-        // إضافة العمليات الجديدة مع المجموع التراكمي
+      // تحديث معاملة الشراء المرتبطة (باستخدام purchaseId)
+      const txIndex = supplier.transactions.findIndex(
+        (tx) => String(tx.purchaseId) === String(existingPurchase._id)
+      );
+      if (txIndex !== -1) {
+        supplier.transactions[txIndex].amount = newTotalAmount;
+        supplier.transactions[txIndex].date = new Date();
+        supplier.transactions[txIndex].details = processedProducts;
+      } else {
         supplier.transactions.push({
           type: "purchase",
-          amount: accumulatedAmount,
+          amount: newTotalAmount,
           date: new Date(),
+          details: processedProducts,
+          purchaseId: existingPurchase._id,
         });
       }
-
       await supplier.save();
     }
 
@@ -375,5 +297,6 @@ router.put("/:id", authenticateToken, async (req, res) => {
     res.status(500).json({ message: "حدث خطأ أثناء تعديل عملية الشراء" });
   }
 });
+
 
 module.exports = router;

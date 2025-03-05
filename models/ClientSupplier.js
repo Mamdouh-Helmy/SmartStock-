@@ -10,8 +10,10 @@ const clientSupplierSchema = new mongoose.Schema({
       type: { type: String, enum: ["sale", "purchase"], required: true },
       amount: { type: Number, required: true },
       date: { type: Date, default: Date.now },
+      details: { type: Array }, // لتخزين تفاصيل المنتجات
+      saleId: { type: mongoose.Schema.Types.ObjectId } // لربط المعاملة بعملية البيع
     },
-  ],
+  ],  
   payments: [
     {
       paymentAmount: { type: Number, required: true }, // ✅ تغيير الاسم لتجنب التداخل

@@ -153,6 +153,73 @@ router.post("/:id/pay", authenticateToken, async (req, res) => {
   }
 });
 
+router.post("/addNote", authenticateToken, async (req, res) => {
+  try {
+    const { supplierId, noteText } = req.body;
+    if (!supplierId || !noteText) {
+      return res.status(400).json({ message: "يجب توفير معرف المورد أو العميل ونص الملاحظة" });
+    }
+    const clientSupplier = await ClientSupplier.findById(supplierId);
+    if (!clientSupplier) {
+      return res.status(404).json({ message: "لم يتم العثور على العميل/المورد" });
+    }
+    clientSupplier.notes.push({ text: noteText });
+    await clientSupplier.save();
+    res.status(200).json({ message: "تمت إضافة الملاحظة بنجاح", notes: clientSupplier.notes });
+  } catch (err) {
+    console.error("حدث خطأ أثناء إضافة الملاحظة:", err);
+    res.status(500).json({ message: "حدث خطأ أثناء إضافة الملاحظة" });
+  }
+});
+
+// تعديل ملاحظة (PUT /api/clients-suppliers/:id/notes/:noteId)
+router.put('/:id/notes/:noteId', authenticateToken, async (req, res) => {
+  try {
+    const { noteText } = req.body;
+    if (!noteText || noteText.trim() === "") {
+      return res.status(400).json({ message: "نص الملاحظة مطلوب" });
+    }
+    const clientSupplier = await ClientSupplier.findById(req.params.id);
+    if (!clientSupplier) {
+      return res.status(404).json({ message: "لم يتم العثور على العميل/المورد" });
+    }
+    const noteIndex = clientSupplier.notes.findIndex(
+      note => note._id.toString() === req.params.noteId
+    );
+    if (noteIndex === -1) {
+      return res.status(404).json({ message: "الملاحظة غير موجودة" });
+    }
+    clientSupplier.notes[noteIndex].text = noteText;
+    clientSupplier.notes[noteIndex].date = new Date(); // تحديث التاريخ بعد التعديل
+    await clientSupplier.save();
+    res.status(200).json({ message: "تم تحديث الملاحظة بنجاح", note: clientSupplier.notes[noteIndex] });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "حدث خطأ أثناء تعديل الملاحظة" });
+  }
+});
+
+// حذف ملاحظة (DELETE /api/clients-suppliers/:id/notes/:noteId)
+router.delete('/:id/notes/:noteId', authenticateToken, async (req, res) => {
+  try {
+    const clientSupplier = await ClientSupplier.findById(req.params.id);
+    if (!clientSupplier) {
+      return res.status(404).json({ message: "لم يتم العثور على العميل/المورد" });
+    }
+    const initialLength = clientSupplier.notes.length;
+    clientSupplier.notes = clientSupplier.notes.filter(
+      note => note._id.toString() !== req.params.noteId
+    );
+    if (clientSupplier.notes.length === initialLength) {
+      return res.status(404).json({ message: "الملاحظة غير موجودة" });
+    }
+    await clientSupplier.save();
+    res.status(200).json({ message: "تم حذف الملاحظة بنجاح" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "حدث خطأ أثناء حذف الملاحظة" });
+  }
+});
 
 
 module.exports = router;

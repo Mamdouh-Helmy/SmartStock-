@@ -16,9 +16,8 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
     }
 
     const saleDate = new Date(sale.saleDate);
-    const formattedDate = `${saleDate.getDate()}/${
-      saleDate.getMonth() + 1
-    }/${saleDate.getFullYear()}`;
+    const formattedDate = `${saleDate.getDate()}/${saleDate.getMonth() + 1
+      }/${saleDate.getFullYear()}`;
     const formattedTime = `${saleDate.getHours()}:${saleDate.getMinutes()}:${saleDate.getSeconds()}`;
 
     const invoiceNumber = `#${saleId}`;
@@ -113,8 +112,8 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
         </thead>
         <tbody>
           ${sale.products
-            .map(
-              (product) => ` 
+        .map(
+          (product) => ` 
             <tr>
               <td>${product.productName}</td>
               <td>${product.quantity}</td>
@@ -122,8 +121,8 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
               <td>${product.quantity * product.price} جنيه</td>
             </tr>
           `
-            )
-            .join("")}
+        )
+        .join("")}
         </tbody>
       </table>
     </body>

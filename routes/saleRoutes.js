@@ -20,8 +20,13 @@ router.post("/addSale", authenticateToken, async (req, res) => {
     for (let product of products) {
       const { productName, quantity, price } = product;
       const inventoryItem = await Inventory.findOne({ productName });
-      if (!inventoryItem || inventoryItem.quantity < quantity) {
-        return res.status(400).json({ message: `الكمية غير كافية للمنتج: ${productName}` });
+
+      if (!inventoryItem) {
+        return res.status(404).json({ message: `❌ المنتج غير موجود: ${productName}` });
+      }
+
+      if (inventoryItem.quantity < quantity) {
+        return res.status(400).json({ message: `⚠️ الكمية غير كافية للمنتج: ${productName}` });
       }
 
       bulkOperations.push({
@@ -54,7 +59,6 @@ router.post("/addSale", authenticateToken, async (req, res) => {
       const totalAmount = productsData.reduce((total, product) => total + product.totalAmount, 0);
       clientSupplier.balance += totalAmount; // تحديث الرصيد
 
-      // إضافة سجل معاملة جديد مع تفاصيل البيع والوقت والتاريخ ورابط العملية (saleId)
       clientSupplier.transactions.push({
         type: "sale",
         amount: totalAmount,
@@ -66,10 +70,10 @@ router.post("/addSale", authenticateToken, async (req, res) => {
       await clientSupplier.save();
     }
 
-    res.status(201).json({ message: 'تمت إضافة عملية البيع بنجاح وتم تحديث المخزون', sale: newSale });
+    res.status(201).json({ message: '✅ تمت إضافة عملية البيع بنجاح وتم تحديث المخزون', sale: newSale });
   } catch (err) {
     console.error('حدث خطأ أثناء إضافة عملية البيع:', err);
-    res.status(500).json({ message: 'حدث خطأ أثناء إضافة عملية البيع' });
+    res.status(500).json({ message: '❌ حدث خطأ أثناء إضافة عملية البيع' });
   }
 });
 

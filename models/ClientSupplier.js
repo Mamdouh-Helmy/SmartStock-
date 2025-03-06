@@ -10,17 +10,23 @@ const clientSupplierSchema = new mongoose.Schema({
       type: { type: String, enum: ["sale", "purchase"], required: true },
       amount: { type: Number, required: true },
       date: { type: Date, default: Date.now },
-      details: { type: Array }, // لتخزين تفاصيل المنتجات
-      saleId: { type: mongoose.Schema.Types.ObjectId } // لربط المعاملة بعملية البيع
+      details: { type: Array },
+      saleId: { type: mongoose.Schema.Types.ObjectId },
     },
-  ],  
+  ],
   payments: [
     {
-      paymentAmount: { type: Number, required: true }, // ✅ تغيير الاسم لتجنب التداخل
+      paymentAmount: { type: Number, required: true },
       date: { type: Date, default: Date.now },
     },
   ],
-  balance: { type: Number, default: 0 }, // الرصيد: + يعني ليك فلوس، - يعني عليك فلوس
+  balance: { type: Number, default: 0 },
+  notes: [
+    {
+      text: { type: String, required: true },
+      date: { type: Date, default: Date.now },
+    },
+  ],
 });
 
 const ClientSupplier = mongoose.model("ClientSupplier", clientSupplierSchema);

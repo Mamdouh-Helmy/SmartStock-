@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const Inventory = require("../models/Inventory");
+const Purchase = require("../models/Purchase");
 const authenticateToken = require("../middleware/authMiddleware");
 
 // إضافة صنف إلى المخزون
@@ -78,25 +79,38 @@ router.put("/updateProduct/:id", authenticateToken, async (req, res) => {
         .json({ message: "اسم المنتج الجديد موجود بالفعل، اختر اسمًا آخر" });
     }
 
-    // تحديث بيانات المنتج
+    // استرجاع المنتج القديم للتحقق من الاسم السابق
+    const oldProduct = await Inventory.findById(req.params.id);
+    if (!oldProduct) {
+      return res.status(404).json({ message: "المنتج غير موجود" });
+    }
+
+    const oldProductName = oldProduct.productName;
+
+    // تحديث بيانات المنتج في Inventory
     const updatedFields = {
       productName,
-      quantity: quantity, // تحديث الكمية مباشرة دون إضافة
+      quantity, // تحديث الكمية مباشرة دون إضافة
       price,
       totalValue: quantity * price, // حساب القيمة الإجمالية بعد التحديث
       year: new Date().getFullYear(),
     };
 
-    // تنفيذ التحديث
     const updatedProduct = await Inventory.findByIdAndUpdate(
       req.params.id,
       { $set: updatedFields },
       { new: true }
     );
 
-    res
-      .status(200)
-      .json({ message: "تم تحديث المنتج بنجاح", product: updatedProduct });
+    // تحديث اسم المنتج داخل عمليات الشراء إذا تغير الاسم فقط
+    if (oldProductName !== productName) {
+      await Purchase.updateMany(
+        { "products.productName": oldProductName },
+        { $set: { "products.$.productName": productName } }
+      );
+    }
+
+    res.status(200).json({ message: "تم تحديث المنتج بنجاح", product: updatedProduct });
   } catch (err) {
     console.error("خطأ أثناء تحديث المنتج:", err);
     res.status(500).json({ message: "حدث خطأ أثناء تحديث المنتج" });

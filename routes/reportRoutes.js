@@ -60,6 +60,25 @@ router.get('/salesByProduct/:year/:productName', authenticateToken, async (req, 
   }
 });
 
+router.get('/inventory/:year/:productName', authenticateToken, async (req, res) => {
+  const { year, productName } = req.params;
+  try {
+    // البحث عن عنصر المخزون بناءً على السنة واسم المنتج
+    const inventoryItem = await Inventory.findOne({
+      year: Number(year),
+      productName: productName
+    });
+    
+    if (!inventoryItem) {
+      return res.status(404).json({ message: "لا يوجد مخزون لهذا المنتج" });
+    }
+    
+    res.json(inventoryItem);
+  } catch (err) {
+    console.error("خطأ في جلب بيانات المخزون:", err);
+    res.status(500).json({ message: "خطأ في جلب بيانات المخزون" });
+  }
+});
 
 // تقرير عن المبيعات لسنة معينة
 router.get('/salesByYear/:year',authenticateToken, async (req, res) => {

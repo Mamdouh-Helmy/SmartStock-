@@ -41,6 +41,26 @@ router.get('/bottomSellingByQuantity/:year', authenticateToken, async (req, res)
   }
 });/////
 
+router.get('/salesByProduct/:year/:productName', authenticateToken, async (req, res) => {
+  const { year, productName } = req.params;
+  try {
+    const salesOperations = await Sale.find({
+      year: Number(year),
+      "products.productName": productName
+    });
+    
+    if (!salesOperations || salesOperations.length === 0) {
+      return res.status(404).json({ message: "لا توجد عمليات بيع لهذا المنتج" });
+    }
+    
+    res.json(salesOperations);
+  } catch (err) {
+    console.error("خطأ في جلب عمليات البيع:", err);
+    res.status(500).json({ message: "خطأ في جلب عمليات البيع" });
+  }
+});
+
+
 // تقرير عن المبيعات لسنة معينة
 router.get('/salesByYear/:year',authenticateToken, async (req, res) => {
   const { year } = req.params;

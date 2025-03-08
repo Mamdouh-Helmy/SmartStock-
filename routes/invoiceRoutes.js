@@ -36,7 +36,15 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
     // توليد رقم فاتورة بصيغة M****
     const invoiceNumber = `M${Math.floor(1000 + Math.random() * 9000)}`;
 
-    // كود HTML للفاتورة مع التوقيع النصي بخط samt 7017
+    // هنا تضع سلسلة الـBase64 الكاملة الخاصة بخط samt 7017
+    // يجب أن تبدأ بـ "data:font/ttf;base64," أو "data:application/x-font-ttf;base64,"
+    // أو يمكنك وضعها بدون هذا الجزء وإضافته في CSS.
+    // فيما يلي مثال توضيحي قصير (سلسلة وهمية).
+    const samtFontBase64 = `
+AAAA...AAAA
+`;
+
+    // كود HTML للفاتورة مع تضمين الخط بخاصية Base64
     const htmlContent = `
 <html lang="ar">
   <head>
@@ -46,13 +54,11 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
       href="https://fonts.googleapis.com/css2?family=Amiri&display=swap"
       rel="stylesheet"
     />
-    <!-- في حال رغبت بالاحتفاظ بخط Lateef يمكنك إبقاؤه، هنا اكتفينا بـ Amiri للعناوين والنص العام -->
-
-    <!-- استيراد خط samt 7017 من ملف محلي -->
     <style>
+      /* تضمين خط samt 7017 بصيغة Base64 */
       @font-face {
         font-family: 'Samt7017';
-        src: url('./fonts/arbfonts-samt-7017.ttf') format('truetype');
+        src: url('data:font/ttf;base64,${samtFontBase64}') format('truetype');
         font-weight: normal;
         font-style: normal;
       }
@@ -204,9 +210,6 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
     });
 
     const page = await browser.newPage();
-
-    // ملاحظة: تأكّد من صحة المسار إلى ملف الخط (samt7017.ttf) ضمن مشروعك.
-    // إذا لم يُعرض الخط بشكل صحيح، جرّب استخدام مسار مطلق أو تحويله إلى Base64.
     await page.setContent(htmlContent, { waitUntil: "load" });
 
     console.log("📄 إنشاء ملف PDF...");

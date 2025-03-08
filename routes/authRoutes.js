@@ -27,6 +27,7 @@ router.post('/login', async (req, res) => {
 
     // توليد التوكن مع تاريخ انتهاء الصلاحية
     const token = jwt.sign({ username: user.username }, process.env.JWT_SECRET, { expiresIn: '15d' });
+    console.log("تم")
 
     return res.json({ 
       message: 'تم تسجيل الدخول بنجاح', 

@@ -52,7 +52,7 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
     <style>
       @font-face {
         font-family: 'Samt7017';
-        src: url('./fonts/arfonts-samt-7017/arfonts-samt-7017.ttf') format('truetype');
+        src: url('./fonts/arbfonts-samt-7017.ttf') format('truetype');
         font-weight: normal;
         font-style: normal;
       }

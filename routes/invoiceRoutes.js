@@ -105,16 +105,39 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
           background: #f0f0f0;
         }
         .signature {
-          text-align: left;
           margin-top: 40px;
           font-size: 18px;
         }
-        .signature .sig {
+        .signature p {
+          margin-bottom: 10px;
+        }
+        .signature-wrapper {
+          display: flex;
+          align-items: center;
+        }
+        .sig {
           font-family: 'Dancing Script', cursive;
-          font-size: 36px;
-          color: #357ab8;
-          transform: rotate(-5deg);
-          /* إزالة الخط السفلي لجعل التوقيع يبدو طبيعي */
+          font-size: 48px;
+          font-weight: bold;
+          background: linear-gradient(45deg, #357ab8, #4a90e2);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          transform: rotate(-3deg);
+        }
+        .stamp {
+          width: 80px;
+          height: 80px;
+          border-radius: 50%;
+          background: linear-gradient(45deg, #ff7e5f, #feb47b);
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          color: #fff;
+          font-family: 'Dancing Script', cursive;
+          font-size: 20px;
+          transform: rotate(-10deg);
+          box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+          margin-left: 20px;
         }
       </style>
     </head>
@@ -159,7 +182,10 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
           </table>
           <div class="signature">
             <p><strong>التوقيع:</strong></p>
-            <div class="sig">${companyName}</div>
+            <div class="signature-wrapper">
+              <div class="sig">${companyName}</div>
+              <div class="stamp">ختم</div>
+            </div>
           </div>
         </div>
       </div>

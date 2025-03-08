@@ -17,9 +17,12 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
       return res.status(404).json({ message: "العملية غير موجودة" });
     }
 
-    // جلب بيانات المستخدم واستخدام الاسم فقط
+    // جلب بيانات المستخدم واستخدام بيانات الشركة
     const user = await User.findOne();
-    const userName = user?.name || "اسم المستخدم";
+    const companyName = user?.name || "اسم الشركة";
+    const companyAddress = user?.address || "عنوان الشركة";
+    const companyPhone = user?.phone || "هاتف الشركة";
+    const companyLogo = user?.logo || "https://img.freepik.com/free-psd/3d-illustration-human-avatar-profile_23-2150671142.jpg";
 
     // تنسيق تاريخ العملية
     const saleDate = new Date(sale.saleDate);
@@ -29,7 +32,7 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
     // توليد رقم فاتورة بصيغة M****
     const invoiceNumber = `M${Math.floor(1000 + Math.random() * 9000)}`;
 
-    // كود HTML المحسن للفاتورة
+    // كود HTML المحسن للفاتورة مع بيانات الشركة
     const htmlContent = `
   <html lang="ar">
     <head>
@@ -63,14 +66,20 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
           background: linear-gradient(135deg, #4a90e2, #357ab8);
           padding: 20px;
           color: #fff;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
         }
-        .header h1 {
-          font-size: 28px;
-          margin-bottom: 5px;
+        .company-info {
+          text-align: right;
         }
-        .header p {
+        .company-info p {
+          margin: 4px 0;
           font-size: 16px;
-          margin: 2px 0;
+        }
+        .logo {
+          width: 120px;
+          height: auto;
         }
         .invoice-body {
           padding: 20px;
@@ -119,8 +128,14 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
     <body>
       <div class="invoice-container">
         <div class="header">
-          <h1 class="emoji">فاتورة بيع</h1>
-          <p class="emoji">الاسم: ${userName}</p>
+          <div class="company-info">
+            <p class="emoji"><strong>اسم الشركة:</strong> ${companyName}</p>
+            <p class="emoji"><strong>العنوان:</strong> ${companyAddress}</p>
+            <p class="emoji"><strong>الهاتف:</strong> ${companyPhone}</p>
+          </div>
+          <div>
+            <img src="${companyLogo}" alt="Logo" class="logo">
+          </div>
         </div>
         <div class="invoice-body">
           <div class="invoice-details">

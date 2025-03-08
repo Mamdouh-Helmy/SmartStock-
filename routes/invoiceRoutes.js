@@ -39,7 +39,7 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
       <meta charset="UTF-8">
       <!-- خطوط مخصصة -->
       <link href="https://fonts.googleapis.com/css2?family=Amiri&display=swap" rel="stylesheet">
-      <link href="https://fonts.googleapis.com/css2?family=Lateef&display=swap" rel="stylesheet">
+      <link href="https://fonts.googleapis.com/css2?family=Dancing+Script&display=swap" rel="stylesheet">
       <link href="https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&display=swap" rel="stylesheet">
       <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -48,8 +48,6 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
           direction: rtl;
           text-align: right;
           background: #f2f2f2;
-          margin: 0;
-          padding: 0;
           display: flex;
           justify-content: center;
           align-items: center;
@@ -57,11 +55,11 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
         }
         .invoice-container {
           width: 700px;
+          min-height: 100vh;
           background: #fff;
           border-radius: 8px;
           box-shadow: 0 4px 8px rgba(0,0,0,0.1);
           overflow: hidden;
-          margin: 20px;
         }
         .header {
           background: linear-gradient(135deg, #4a90e2, #357ab8);
@@ -112,12 +110,11 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
           font-size: 18px;
         }
         .signature .sig {
-          font-family: 'Lateef', cursive;
+          font-family: 'Dancing Script', cursive;
           font-size: 36px;
           color: #357ab8;
-          border-bottom: 2px solid #357ab8;
-          display: inline-block;
-          padding-bottom: 5px;
+          transform: rotate(-5deg);
+          /* إزالة الخط السفلي لجعل التوقيع يبدو طبيعي */
         }
       </style>
     </head>
@@ -135,18 +132,18 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
         </div>
         <div class="invoice-body">
           <div class="invoice-details">
-            <p><strong>📌 رقم الفاتورة:</strong> ${invoiceNumber}</p>
-            <p><strong>📅 التاريخ:</strong> ${formattedDate}</p>
-            <p><strong>⏰ الوقت:</strong> ${formattedTime}</p>
-            <p><strong>👤 اسم العميل:</strong> ${sale.customerName}</p>
+            <p><strong>رقم الفاتورة:</strong> ${invoiceNumber}</p>
+            <p><strong>التاريخ:</strong> ${formattedDate}</p>
+            <p><strong>الوقت:</strong> ${formattedTime}</p>
+            <p><strong>اسم العميل:</strong> ${sale.customerName}</p>
           </div>
           <table class="table">
             <thead>
               <tr>
-                <th>📦 المنتج</th>
-                <th>🔢 الكمية</th>
-                <th>💰 السعر</th>
-                <th>💲 الإجمالي</th>
+                <th>المنتج</th>
+                <th>الكمية</th>
+                <th>السعر</th>
+                <th>الإجمالي</th>
               </tr>
             </thead>
             <tbody>

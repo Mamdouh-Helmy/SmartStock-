@@ -36,21 +36,23 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
     // توليد رقم فاتورة بصيغة M****
     const invoiceNumber = `M${Math.floor(1000 + Math.random() * 9000)}`;
 
-    // كود HTML للفاتورة
+    // كود HTML للفاتورة مع التوقيع النصي بخط samt 7017
     const htmlContent = `
 <html lang="ar">
   <head>
     <meta charset="UTF-8" />
-    <!-- خطوط مخصصة من Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Amiri&display=swap" rel="stylesheet" />
-    <link href="https://fonts.googleapis.com/css2?family=Lateef&display=swap" rel="stylesheet" />
+    <!-- خطوط مخصصة -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Amiri&display=swap"
+      rel="stylesheet"
+    />
+    <!-- في حال رغبت بالاحتفاظ بخط Lateef يمكنك إبقاؤه، هنا اكتفينا بـ Amiri للعناوين والنص العام -->
 
-    <!-- تضمين الخط المحلي المخصص (MySignatureFont) -->
+    <!-- استيراد خط samt 7017 من ملف محلي -->
     <style>
       @font-face {
-        font-family: 'MySignatureFont';
-        src: url('fonts/arfonts-diwani-outline-shaded/arfonts-diwani-outline-shaded.ttf') format('truetype');
-        /* إذا كان اسم الخط وامتداده مختلفًا عدّله هنا */
+        font-family: 'Samt7017';
+        src: url('./fonts/arfonts-samt-7017/arfonts-samt-7017.ttf') format('truetype');
         font-weight: normal;
         font-style: normal;
       }
@@ -129,13 +131,14 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
       .signature p {
         margin-bottom: 10px;
       }
-      /* توقيع كنص بالخط المخصص */
+
+      /* توقيع نصي بخط samt 7017 */
       .sig-text {
-        display: block;
-        font-family: 'MySignatureFont', 'Lateef', cursive;
+        font-family: 'Samt7017', serif;
         font-size: 32px;
-        color: #0044cc; /* لون أزرق */
+        color: #0044cc; /* لون التوقيع */
         margin-top: 10px;
+        display: inline-block;
       }
     </style>
   </head>
@@ -184,7 +187,7 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
         </table>
         <div class="signature">
           <p><strong>التوقيع:</strong></p>
-          <!-- توقيع كنص بالخط المخصص -->
+          <!-- التوقيع بخط samt 7017 -->
           <span class="sig-text">${companyName}</span>
         </div>
       </div>
@@ -201,14 +204,16 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
     });
 
     const page = await browser.newPage();
-    // ملاحظة: إذا كان الخط في مسار نسبي، قد تحتاج إلى جعل Puppeteer يستطيع الوصول إليه
-    // يمكنك مثلاً استخدام مسار مطلق أو تضمين الخط Base64. 
+
+    // ملاحظة: تأكّد من صحة المسار إلى ملف الخط (samt7017.ttf) ضمن مشروعك.
+    // إذا لم يُعرض الخط بشكل صحيح، جرّب استخدام مسار مطلق أو تحويله إلى Base64.
     await page.setContent(htmlContent, { waitUntil: "load" });
 
     console.log("📄 إنشاء ملف PDF...");
     const pdfBuffer = await page.pdf({
       format: "A4",
       printBackground: true,
+      // لجعل الـ PDF بلا هوامش تقريباً، يمكن تقليل هذه القيم أو جعلها 0
       margin: { top: "0px", right: "0px", bottom: "0px", left: "0px" },
     });
 

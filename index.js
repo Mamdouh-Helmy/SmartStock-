@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const http = require('http'); // لاستعمال http server مع Socket.IO
 const { Server } = require('socket.io'); // لاستعمال Socket.IO
-require('dotenv').config();  // لقراءة متغيرات البيئة من ملف .env
+require('dotenv').config(); // لقراءة متغيرات البيئة من ملف .env
 const connectDB = require('./config/db'); // استيراد الاتصال بقاعدة البيانات
 const authRoutes = require('./routes/authRoutes');
 const saleRoutes = require('./routes/saleRoutes');
@@ -16,7 +16,7 @@ const app = express();
 const server = http.createServer(app); // استخدام http server لتشغيل Socket.IO
 const io = new Server(server, {
   cors: {
-    origin: ['http://localhost:5173', 'https://stockmaster-4dbcc.web.app'], 
+    origin: ['http://localhost:5173', 'https://stockmaster-4dbcc.web.app'],
     methods: ['GET', 'POST'],
   },
 });
@@ -24,12 +24,16 @@ const io = new Server(server, {
 const PORT = process.env.PORT || 5000;
 
 // إعداد CORS
-app.use(cors({
-  origin: ['http://localhost:5173', 'https://stockmaster-4dbcc.web.app'], 
-  credentials: true,
-}));
+app.use(
+  cors({
+    origin: ['http://localhost:5173', 'https://stockmaster-4dbcc.web.app'],
+    credentials: true,
+  })
+);
 
-app.use(express.json());
+// **هنا نزيد الحد الأقصى لحجم الطلب**
+app.use(express.json({ limit: '20mb' }));
+app.use(express.urlencoded({ limit: '20mb', extended: true }));
 
 // التحقق من متغيرات البيئة
 if (!process.env.JWT_SECRET || !process.env.MONGODB_URI) {
@@ -52,7 +56,7 @@ app.use('/api/invoices', invoiceRoutes); // إضافة مسار الفواتير
 // إعداد Socket.IO
 io.on('connection', (socket) => {
   console.log('عميل متصل');
-  
+
   // مثال على حدث من العميل
   socket.on('newSale', (data) => {
     console.log('تم إضافة عملية بيع جديدة:', data);

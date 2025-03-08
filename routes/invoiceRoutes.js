@@ -36,26 +36,25 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
     // توليد رقم فاتورة بصيغة M****
     const invoiceNumber = `M${Math.floor(1000 + Math.random() * 9000)}`;
 
-    // رابط صورة التوقيع (استبدله بالرابط الفعلي لصورة توقيعك)
-    const signatureImageURL =
-      "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e5/Ar_signature.svg/800px-Ar_signature.svg.png";
-
     // كود HTML للفاتورة
     const htmlContent = `
 <html lang="ar">
   <head>
     <meta charset="UTF-8" />
-    <!-- خطوط مخصصة -->
-    <link
-      href="https://fonts.googleapis.com/css2?family=Amiri&display=swap"
-      rel="stylesheet"
-    />
-    <!-- استخدام خط Lateef لمحاكاة الخط الرقعة العربي -->
-    <link
-      href="https://fonts.googleapis.com/css2?family=Lateef&display=swap"
-      rel="stylesheet"
-    />
+    <!-- خطوط مخصصة من Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Amiri&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Lateef&display=swap" rel="stylesheet" />
+
+    <!-- تضمين الخط المحلي المخصص (MySignatureFont) -->
     <style>
+      @font-face {
+        font-family: 'MySignatureFont';
+        src: url('fonts/arfonts-diwani-outline-shaded/arfonts-diwani-outline-shaded.ttf') format('truetype');
+        /* إذا كان اسم الخط وامتداده مختلفًا عدّله هنا */
+        font-weight: normal;
+        font-style: normal;
+      }
+
       * {
         margin: 0;
         padding: 0;
@@ -130,17 +129,14 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
       .signature p {
         margin-bottom: 10px;
       }
-      /* توقيع بصورة */
-      .sig-img {
+      /* توقيع كنص بالخط المخصص */
+      .sig-text {
         display: block;
-        width: 220px;
-        height: auto;
+        font-family: 'MySignatureFont', 'Lateef', cursive;
+        font-size: 32px;
+        color: #0044cc; /* لون أزرق */
         margin-top: 10px;
-        /* لوّن التوقيع بالأزرق إن كانت صورة SVG قابلة للتلوين عبر filter (في حال كانت أحادية اللون) */
-        /* filter: invert(14%) sepia(93%) saturate(4369%) hue-rotate(207deg) brightness(93%) contrast(112%); */
       }
-      /* في حال الصورة ليست SVG أحادية اللون، لن تعمل الفلاتر لتغيير لونها بشكل كامل.
-         لذا يُفضل أن تكون الصورة نفسها باللون الأزرق مسبقاً أو تستخدم SVG أحادية اللون. */
     </style>
   </head>
   <body>
@@ -188,8 +184,8 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
         </table>
         <div class="signature">
           <p><strong>التوقيع:</strong></p>
-          <!-- صورة التوقيع -->
-          <img src="${signatureImageURL}" alt="Signature" class="sig-img" />
+          <!-- توقيع كنص بالخط المخصص -->
+          <span class="sig-text">${companyName}</span>
         </div>
       </div>
     </div>
@@ -205,13 +201,14 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
     });
 
     const page = await browser.newPage();
+    // ملاحظة: إذا كان الخط في مسار نسبي، قد تحتاج إلى جعل Puppeteer يستطيع الوصول إليه
+    // يمكنك مثلاً استخدام مسار مطلق أو تضمين الخط Base64. 
     await page.setContent(htmlContent, { waitUntil: "load" });
 
     console.log("📄 إنشاء ملف PDF...");
     const pdfBuffer = await page.pdf({
       format: "A4",
       printBackground: true,
-      // لجعل الـ PDF بلا هوامش تقريباً، يمكن تقليل هذه القيم أو جعلها 0
       margin: { top: "0px", right: "0px", bottom: "0px", left: "0px" },
     });
 

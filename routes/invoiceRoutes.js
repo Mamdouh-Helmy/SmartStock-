@@ -36,8 +36,7 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
     // توليد رقم فاتورة بصيغة M****
     const invoiceNumber = `M${Math.floor(1000 + Math.random() * 9000)}`;
 
-    // كود HTML للفاتورة مع الإبقاء على الإشارة إلى font-family: 'Samt7017'
-    // لكن من دون تضمين الكود الخاص بـ @font-face
+    // كود HTML للفاتورة مع التوقيع النصي بخط samt 7017
     const htmlContent = `
 <html lang="ar">
   <head>
@@ -47,8 +46,12 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
       href="https://fonts.googleapis.com/css2?family=Amiri&display=swap"
       rel="stylesheet"
     />
-    <!-- لم نعد نعرّف @font-face للسamt7017 -->
+    <!-- في حال رغبت بالاحتفاظ بخط Lateef يمكنك إبقاؤه، هنا اكتفينا بـ Amiri للعناوين والنص العام -->
+
+    <!-- استيراد خط samt 7017 من ملف محلي -->
     <style>
+     
+
       * {
         margin: 0;
         padding: 0;
@@ -124,11 +127,8 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
         margin-bottom: 10px;
       }
 
-      /* توقيع نصي يشير إلى 'Samt7017'، 
-         ولكن بما أننا حذفنا @font-face 
-         سيستخدم المتصفح أي خط افتراضي إذا لم يجد الخط. */
+      /* توقيع نصي بخط samt 7017 */
       .sig-text {
-        font-family: 'Samt7017', serif;
         font-size: 32px;
         color: #0044cc; /* لون التوقيع */
         margin-top: 10px;
@@ -181,7 +181,7 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
         </table>
         <div class="signature">
           <p><strong>التوقيع:</strong></p>
-          <!-- التوقيع بخط samt 7017 (لن يعمل فعليًا إن لم يكن مثبتًا في النظام أو مضمّنًا بطريقة أخرى) -->
+          <!-- التوقيع بخط samt 7017 -->
           <span class="sig-text">${companyName}</span>
         </div>
       </div>
@@ -199,6 +199,8 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
 
     const page = await browser.newPage();
 
+    // ملاحظة: تأكّد من صحة المسار إلى ملف الخط (samt7017.ttf) ضمن مشروعك.
+    // إذا لم يُعرض الخط بشكل صحيح، جرّب استخدام مسار مطلق أو تحويله إلى Base64.
     await page.setContent(htmlContent, { waitUntil: "load" });
 
     console.log("📄 إنشاء ملف PDF...");

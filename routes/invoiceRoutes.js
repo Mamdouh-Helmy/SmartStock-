@@ -32,14 +32,15 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
     // توليد رقم فاتورة بصيغة M****
     const invoiceNumber = `M${Math.floor(1000 + Math.random() * 9000)}`;
   
-    // كود HTML المحسن للفاتورة
+    // كود HTML المحسن للفاتورة مع التعديلات المطلوبة
     const htmlContent = `
   <html lang="ar">
     <head>
       <meta charset="UTF-8">
       <!-- خطوط مخصصة -->
       <link href="https://fonts.googleapis.com/css2?family=Amiri&display=swap" rel="stylesheet">
-      <link href="https://fonts.googleapis.com/css2?family=Dancing+Script&display=swap" rel="stylesheet">
+      <!-- استخدام خط Lateef لمحاكاة الخط الركعة العربي -->
+      <link href="https://fonts.googleapis.com/css2?family=Lateef&display=swap" rel="stylesheet">
       <link href="https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&display=swap" rel="stylesheet">
       <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -56,7 +57,8 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
         .invoice-container {
           width: 700px;
           min-height: 100vh;
-          background: #fff;
+          /* خلفية متدرجة ناعمة */
+          background: linear-gradient(135deg, #ffffff, #f5f5f5);
           border-radius: 8px;
           box-shadow: 0 4px 8px rgba(0,0,0,0.1);
           overflow: hidden;
@@ -107,37 +109,37 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
         .signature {
           margin-top: 40px;
           font-size: 18px;
+          position: relative;
         }
         .signature p {
           margin-bottom: 10px;
         }
         .signature-wrapper {
-          display: flex;
-          align-items: center;
+          position: relative;
+          display: inline-block;
         }
+        /* التوقيع بخط Lateef بحجم أصغر */
         .sig {
-          font-family: 'Dancing Script', cursive;
-          font-size: 48px;
-          font-weight: bold;
-          background: linear-gradient(45deg, #357ab8, #4a90e2);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          transform: rotate(-3deg);
+          font-family: 'Lateef', cursive;
+          font-size: 32px;
+          color: #000;
         }
+        /* الختم يظهر كأنه بحبر أزرق ومحطوط على التوقيع */
         .stamp {
-          width: 80px;
-          height: 80px;
+          position: absolute;
+          bottom: -10px;
+          right: -10px;
+          width: 50px;
+          height: 50px;
           border-radius: 50%;
-          background: linear-gradient(45deg, #ff7e5f, #feb47b);
+          background: linear-gradient(45deg, #357ab8, #4a90e2);
           display: flex;
           justify-content: center;
           align-items: center;
           color: #fff;
-          font-family: 'Dancing Script', cursive;
-          font-size: 20px;
-          transform: rotate(-10deg);
-          box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-          margin-left: 20px;
+          font-family: 'Lateef', cursive;
+          font-size: 14px;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.3);
         }
       </style>
     </head>

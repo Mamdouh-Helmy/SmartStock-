@@ -9,8 +9,14 @@ const User = require("../models/User");
 
 // حساب المسار المطلق لملف الخط الجديد "Deco Type Thuluth II.ttf"
 const fontPath = path.join(__dirname, "../fonts/Deco Type Thuluth II.ttf");
-// تحويل المسار إلى URL باستخدام بروتوكول file:// وترميز URL باستخدام encodeURI
-const fontFileUrl = encodeURI(`file://${fontPath.replace(/\\/g, "/")}`);
+
+// التحقق من وجود ملف الخط
+if (!fs.existsSync(fontPath)) {
+  console.error("ملف الخط غير موجود في المسار المحدد:", fontPath);
+}
+
+// تحويل المسار إلى URL باستخدام بروتوكول file://
+const fontFileUrl = `file://${fontPath.replace(/\\/g, "/")}`;
 
 router.get("/generateInvoice/:saleId", async (req, res) => {
   const saleId = req.params.saleId;
@@ -48,7 +54,7 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
     // التحقق مما إذا كان الاسم يحتوي على حروف عربية
     const isArabic = /[\u0600-\u06FF]/.test(companyName);
 
-    // الكود الخاص بالـ HTML مع تضمين الخط العربي باستخدام المسار المطلق المُرمَّز
+    // الكود الخاص بالـ HTML مع تضمين الخط العربي باستخدام المسار المطلق
     const htmlContent = `
 <html lang="ar">
   <head>
@@ -58,7 +64,7 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
     <link href="https://fonts.googleapis.com/css2?family=Amiri&display=swap" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Satisfy&display=swap" rel="stylesheet" />
     <style>
-      /* تضمين خط التوقيع العربي "Deco Type Thuluth II.ttf" باستخدام مسار مطلق مُرمَّز */
+      /* تضمين خط التوقيع العربي "Deco Type Thuluth II.ttf" باستخدام مسار مطلق */
       @font-face {
         font-family: 'ArbCalligraphy';
         src: url('${fontFileUrl}') format('truetype');
@@ -176,14 +182,18 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
             </tr>
           </thead>
           <tbody>
-            ${sale.products.map(product => `
+            ${sale.products
+              .map(
+                (product) => `
               <tr>
                 <td>${product.productName}</td>
                 <td>${product.quantity}</td>
                 <td>${product.price} جنيه</td>
                 <td>${product.quantity * product.price} جنيه</td>
               </tr>
-            `).join('')}
+            `
+              )
+              .join("")}
           </tbody>
         </table>
         <div class="total">
@@ -192,7 +202,7 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
         <div class="signature">
           <p><strong>التوقيع:</strong></p>
           <!-- تحديد لغة التوقيع بناءً على محتوى الاسم -->
-          <span class="sig-text" lang="${isArabic ? 'ar' : 'en'}">${companyName}</span>
+          <span class="sig-text" lang="${isArabic ? "ar" : "en"}">${companyName}</span>
         </div>
       </div>
     </div>
@@ -204,7 +214,7 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
     const browser = await puppeteer.launch({
       headless: chromium.headless,
       executablePath: await chromium.executablePath(),
-      args: [...chromium.args, "--allow-file-access-from-files"]
+      args: [...chromium.args, "--allow-file-access-from-files", "--disable-web-security"],
     });
 
     const page = await browser.newPage();
@@ -223,6 +233,7 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
     await browser.close();
     console.log("✅ تم إنشاء PDF بنجاح!");
 
+    // حفظ الملف في مجلد الفواتير
     const invoicesDir = path.join(__dirname, "../invoices");
     if (!fs.existsSync(invoicesDir)) {
       fs.mkdirSync(invoicesDir, { recursive: true });
@@ -231,6 +242,7 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
     const filePath = path.join(invoicesDir, `invoice_${saleId}.pdf`);
     fs.writeFileSync(filePath, pdfBuffer);
 
+    // إرسال الملف كاستجابة للعميل
     res.setHeader("Content-Disposition", `attachment; filename=invoice_${saleId}.pdf`);
     res.setHeader("Content-Type", "application/pdf");
     res.download(filePath);

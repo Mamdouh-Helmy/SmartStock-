@@ -25,9 +25,9 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
       "https://img.freepik.com/free-psd/3d-illustration-human-avatar-profile_23-2150671142.jpg";
     
     // تنسيق تاريخ العملية
-    const saleDate = new Date(sale.saleDate);
-    const formattedDate = `${saleDate.getDate()}/${saleDate.getMonth() + 1}/${saleDate.getFullYear()}`;
-    const formattedTime = `${saleDate.getHours()}:${saleDate.getMinutes()}:${saleDate.getSeconds()}`;
+    const now = new Date();
+    const formattedDate = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
+    const formattedTime = `${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}`;
     
     // توليد رقم فاتورة بصيغة M****
     const invoiceNumber = `M${Math.floor(1000 + Math.random() * 9000)}`;

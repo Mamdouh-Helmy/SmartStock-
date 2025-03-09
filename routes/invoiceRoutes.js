@@ -24,10 +24,11 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
       user?.logo ||
       "https://img.freepik.com/free-psd/3d-illustration-human-avatar-profile_23-2150671142.jpg";
     
-    // استخدام الوقت والتاريخ الحالي
+    // استخدام الوقت والتاريخ الحالي مع تحديد المنطقة الزمنية المطلوبة (مثلاً منطقة القاهرة)
     const now = new Date();
-    const formattedDate = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
-    const formattedTime = `${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}`;
+    const options = { timeZone: 'Africa/Cairo', hour12: false };
+    const formattedDate = now.toLocaleDateString('ar-EG', options);
+    const formattedTime = now.toLocaleTimeString('ar-EG', options);
     
     // توليد رقم فاتورة بصيغة M****
     const invoiceNumber = `M${Math.floor(1000 + Math.random() * 9000)}`;

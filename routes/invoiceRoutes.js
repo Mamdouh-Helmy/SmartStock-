@@ -59,10 +59,10 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
     <link href="https://fonts.googleapis.com/css2?family=Amiri&display=swap" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Satisfy&display=swap" rel="stylesheet" />
     <style>
-      /* تضمين خط التوقيع العربي المخصص "alfont_com_RTL-Lustrous-Bold.otf" باستخدام مسار مطلق */
+      /* تضمين خط التوقيع العربي "Areeq Al Gafelh.ttf" باستخدام مسار مطلق */
       @font-face {
         font-family: 'ArbCalligraphy';
-        src: url('${fontFileUrl}') format('opentype');
+        src: url('${fontFileUrl}') format('truetype');
         font-weight: normal;
         font-style: normal;
       }
@@ -209,7 +209,10 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
     });
 
     const page = await browser.newPage();
-    await page.setContent(htmlContent, { waitUntil: "load" });
+
+    // تحديد baseURL حتى يتم تحميل الملفات النسبية بشكل صحيح
+    const baseURL = `file://${path.join(__dirname, "../")}/`;
+    await page.setContent(htmlContent, { waitUntil: "load", baseURL });
 
     console.log("📄 إنشاء ملف PDF...");
     const pdfBuffer = await page.pdf({

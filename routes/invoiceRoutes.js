@@ -40,15 +40,19 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
       0
     );
 
-    // كود HTML للفاتورة مع RTL، اللوجو، وتوقيع نصي بخط Satisfy يشبه توقيع لاعب كرة
+    // التحقق مما إذا كان الاسم يحتوي على حروف عربية
+    const isArabic = /[\u0600-\u06FF]/.test(companyName);
+
+    // كود HTML للفاتورة مع RTL، اللوجو، وتوقيع نصي بخط توقيع (Satisfy للإنجليزية وLateef للعربية)
     const htmlContent = `
 <html lang="ar">
   <head>
     <meta charset="UTF-8" />
     <title>فاتورة المبيعات</title>
-    <!-- استيراد خط Amiri للنص العام وخط Satisfy للتوقيع -->
+    <!-- استيراد خطوط Amiri للنص العام، Satisfy للتوقيع الإنجليزي، وLateef للتوقيع العربي -->
     <link href="https://fonts.googleapis.com/css2?family=Amiri&display=swap" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Satisfy&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Lateef&display=swap" rel="stylesheet" />
     <style>
       body {
         background: #f2f2f2;
@@ -113,8 +117,15 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
         margin-top: 40px;
         text-align: center;
       }
-      .signature .sig-text {
+      /* تطبيق خط توقيع مناسب حسب لغة التوقيع */
+      .signature .sig-text[lang="en"] {
         font-family: 'Satisfy', cursive;
+        font-size: 48px;
+        color: #0044cc;
+        transform: rotate(-3deg);
+      }
+      .signature .sig-text[lang="ar"] {
+        font-family: 'Lateef', cursive;
         font-size: 48px;
         color: #0044cc;
         transform: rotate(-3deg);
@@ -169,8 +180,8 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
         </div>
         <div class="signature">
           <p><strong>التوقيع:</strong></p>
-          <!-- التوقيع كنص باستخدام خط Satisfy لإضفاء طابع توقيع حقيقي -->
-          <span class="sig-text">${companyName}</span>
+          <!-- تحديد لغة التوقيع بناءً على محتوى الاسم -->
+          <span class="sig-text" lang="${isArabic ? 'ar' : 'en'}">${companyName}</span>
         </div>
       </div>
     </div>

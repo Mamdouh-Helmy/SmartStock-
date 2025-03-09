@@ -22,6 +22,9 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
     const companyName = user?.name || "اسم الشركة";
     const companyAddress = user?.address || "عنوان الشركة";
     const companyPhone = user?.phone || "هاتف الشركة";
+    const companyLogo =
+      user?.logo ||
+      "https://img.freepik.com/free-psd/3d-illustration-human-avatar-profile_23-2150671142.jpg";
 
     // تنسيق تاريخ العملية
     const saleDate = new Date(sale.saleDate);
@@ -37,13 +40,13 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
       0
     );
 
-    // كود HTML للفاتورة مع تنسيق RTL وتوقيع بنص بخط توقيع يشبه توقيع لاعب كوره (باستخدام خط Satisfy)
+    // كود HTML للفاتورة مع RTL، اللوجو، وتوقيع نصي بخط Satisfy يشبه توقيع لاعب كرة
     const htmlContent = `
 <html lang="ar">
   <head>
     <meta charset="UTF-8" />
     <title>فاتورة المبيعات</title>
-    <!-- استيراد خطوط Amiri للنص العام وخط Satisfy للتوقيع -->
+    <!-- استيراد خط Amiri للنص العام وخط Satisfy للتوقيع -->
     <link href="https://fonts.googleapis.com/css2?family=Amiri&display=swap" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Satisfy&display=swap" rel="stylesheet" />
     <style>
@@ -73,6 +76,10 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
       .company-info p {
         margin: 5px 0;
         font-size: 18px;
+      }
+      .logo {
+        width: 120px;
+        height: auto;
       }
       .invoice-body {
         padding: 20px;
@@ -110,6 +117,7 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
         font-family: 'Satisfy', cursive;
         font-size: 48px;
         color: #0044cc;
+        transform: rotate(-3deg);
       }
       .signature p {
         margin-top: 10px;
@@ -124,6 +132,9 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
           <p><strong>اسم الشركة:</strong> ${companyName}</p>
           <p><strong>العنوان:</strong> ${companyAddress}</p>
           <p><strong>الهاتف:</strong> ${companyPhone}</p>
+        </div>
+        <div>
+          <img src="${companyLogo}" alt="Logo" class="logo" />
         </div>
       </div>
       <div class="invoice-body">
@@ -158,7 +169,7 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
         </div>
         <div class="signature">
           <p><strong>التوقيع:</strong></p>
-          <!-- التوقيع كنص باستخدام خط Satisfy -->
+          <!-- التوقيع كنص باستخدام خط Satisfy لإضفاء طابع توقيع حقيقي -->
           <span class="sig-text">${companyName}</span>
         </div>
       </div>

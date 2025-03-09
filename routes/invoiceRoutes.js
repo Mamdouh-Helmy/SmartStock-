@@ -8,7 +8,7 @@ const Sale = require("../models/Sale");
 const User = require("../models/User");
 
 // حساب المسار المطلق لملف الخط
-const fontPath = path.join(__dirname, "../fonts/alfont_com_RTL-Lustrous-Bold.otf");
+const fontPath = path.join(__dirname, "../fonts/Areeq Al Gafelh.ttf");
 // تحويل المسار إلى URL باستخدام بروتوكول file://
 // نستخدم replace لتحويل الفواصل المائلة للخلف إلى الفواصل المائلة للأمام في حال تشغيل المشروع على Windows
 const fontFileUrl = `file://${fontPath.replace(/\\/g, "/")}`;

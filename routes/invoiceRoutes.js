@@ -24,13 +24,15 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
       user?.logo ||
       "https://img.freepik.com/free-psd/3d-illustration-human-avatar-profile_23-2150671142.jpg";
     
-    // تنسيق التاريخ والوقت
+    // تنسيق تاريخ العملية
     const saleDate = new Date(sale.saleDate);
     const formattedDate = `${saleDate.getDate()}/${saleDate.getMonth() + 1}/${saleDate.getFullYear()}`;
     const formattedTime = `${saleDate.getHours()}:${saleDate.getMinutes()}:${saleDate.getSeconds()}`;
     
-    // توليد رقم الفاتورة وحساب الإجمالي العام
+    // توليد رقم فاتورة بصيغة M****
     const invoiceNumber = `M${Math.floor(1000 + Math.random() * 9000)}`;
+    
+    // حساب الإجمالي العام
     const totalAmount = sale.products.reduce(
       (acc, product) => acc + product.quantity * product.price,
       0
@@ -39,7 +41,7 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
     // التحقق مما إذا كان الاسم يحتوي على حروف عربية
     const isArabic = /[\u0600-\u06FF]/.test(companyName);
     
-    // كود HTML للفاتورة بتصميم مطور
+    // كود HTML للفاتورة مع التصميم المحسن
     const htmlContent = `
 <html lang="ar">
   <head>
@@ -50,101 +52,95 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
     <link href="https://fonts.googleapis.com/css2?family=Satisfy&display=swap" rel="stylesheet" />
     <style>
       body {
-        background: #f0f0f0;
+        background: #f2f2f2;
         font-family: 'Amiri', serif;
+        margin: 0;
+        padding: 20px;
         direction: rtl;
         text-align: right;
-        margin: 0;
-        padding: 0;
       }
       .invoice-container {
-        width: 90%;
         max-width: 800px;
-        margin: 40px auto;
+        margin: 0 auto;
         background: #fff;
-        border-radius: 10px;
+        border-radius: 8px;
         overflow: hidden;
-        box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        box-shadow: 0 0 10px rgba(0,0,0,0.1);
       }
-      .invoice-header {
-        background: linear-gradient(135deg, #800000, #DAA520);
-        color: #fff;
-        padding: 25px;
+      .header {
+        background: linear-gradient(135deg, #2c3e50, #34495e);
+        color: #ecf0f1;
+        padding: 20px;
         display: flex;
         justify-content: space-between;
         align-items: center;
       }
-      .invoice-header .company-info {
-        font-size: 20px;
+      .company-info p {
+        margin: 5px 0;
+        font-size: 18px;
       }
-      .invoice-header .company-info p {
-        margin: 4px 0;
-      }
-      .invoice-header .logo {
-        width: 100px;
-        height: 100px;
+      .logo {
+        width: 120px;
+        height: 120px;
         border-radius: 50%;
-        border: 3px solid #fff;
+        border: 2px solid #fff;
+        object-fit: cover;
       }
       .invoice-body {
-        padding: 30px;
-      }
-      .invoice-details {
-        margin-bottom: 25px;
-        font-size: 18px;
-        line-height: 1.8;
+        padding: 20px;
       }
       .invoice-details p {
-        margin: 6px 0;
+        margin: 8px 0;
+        font-size: 16px;
       }
-      .products-table {
+      .table {
         width: 100%;
         border-collapse: collapse;
-        margin-bottom: 25px;
+        margin-top: 20px;
       }
-      .products-table th,
-      .products-table td {
+      .table th,
+      .table td {
         border: 1px solid #ddd;
         padding: 12px;
         font-size: 16px;
         text-align: center;
       }
-      .products-table th {
-        background: #f8f8f8;
+      .table th {
+        background: #ecf0f1;
       }
-      .products-table tr:nth-child(even) {
-        background: #fbfbfb;
-      }
-      .total-amount {
+      .total {
         text-align: right;
-        font-size: 22px;
+        font-size: 20px;
+        margin-top: 20px;
         font-weight: bold;
-        padding: 15px;
-        background: #f8f8f8;
-        border-top: 2px solid #ddd;
       }
       .signature {
-        margin-top: 30px;
+        margin-top: 20px;
         text-align: center;
       }
-      .signature .sig-text {
-        font-size: 42px;
-        background: linear-gradient(45deg, #800000, #DAA520);
+      /* تصميم توقيع مع تأثير تدرج وظل للنص */
+      .signature .sig-text[lang="ar"],
+      .signature .sig-text[lang="en"] {
+        font-size: 48px;
+        background: linear-gradient(45deg, #2c3e50, #ff0099);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         transform: rotate(-3deg);
-        text-shadow: 2px 2px 5px rgba(0,0,0,0.3);
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+      }
+      .signature .sig-text[lang="en"] {
+        font-family: 'Satisfy', cursive;
       }
       .signature p {
-        margin-top: 12px;
-        font-size: 18px;
-        color: #555;
+        margin-top: 10px;
+        font-size: 16px;
+        color: #333;
       }
     </style>
   </head>
   <body>
     <div class="invoice-container">
-      <div class="invoice-header">
+      <div class="header">
         <div class="company-info">
           <p><strong>اسم الشركة:</strong> ${companyName}</p>
           <p><strong>العنوان:</strong> ${companyAddress}</p>
@@ -161,7 +157,7 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
           <p><strong>الوقت:</strong> ${formattedTime}</p>
           <p><strong>اسم العميل:</strong> ${sale.customerName}</p>
         </div>
-        <table class="products-table">
+        <table class="table">
           <thead>
             <tr>
               <th>المنتج</th>
@@ -171,23 +167,28 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
             </tr>
           </thead>
           <tbody>
-            ${sale.products.map(product => `
+            ${sale.products
+              .map(
+                (product) => `
               <tr>
                 <td>${product.productName}</td>
                 <td>${product.quantity}</td>
                 <td>${product.price} جنيه</td>
                 <td>${product.quantity * product.price} جنيه</td>
               </tr>
-            `).join('')}
+            `
+              )
+              .join("")}
           </tbody>
         </table>
-        <div class="total-amount">
+        <div class="total">
           <p>المجموع: ${totalAmount} جنيه</p>
         </div>
         <div class="signature">
           <p><strong>التوقيع:</strong></p>
-          <span class="sig-text" lang="${isArabic ? 'ar' : 'en'}">${companyName}</span>
-          <p>شكراً لتعاملكم معنا</p>
+          <!-- تحديد لغة التوقيع بناءً على محتوى الاسم -->
+          <span class="sig-text" lang="${isArabic ? "ar" : "en"}">${companyName}</span>
+          <p>شكراً لتعاملكم معانا</p>
         </div>
       </div>
     </div>
@@ -199,7 +200,7 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
     const browser = await puppeteer.launch({
       headless: chromium.headless,
       executablePath: await chromium.executablePath(),
-      args: chromium.args
+      args: chromium.args,
     });
     const page = await browser.newPage();
     await page.setContent(htmlContent, { waitUntil: "load" });
@@ -207,7 +208,7 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
     const pdfBuffer = await page.pdf({
       format: "A4",
       printBackground: true,
-      margin: { top: "0px", right: "0px", bottom: "0px", left: "0px" }
+      margin: { top: "0px", right: "0px", bottom: "0px", left: "0px" },
     });
     await browser.close();
     console.log("✅ تم إنشاء PDF بنجاح!");

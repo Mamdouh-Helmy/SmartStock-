@@ -115,25 +115,22 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
         font-weight: bold;
       }
       .signature {
-        margin-top: 40px;
+        margin-top: 20px;
         text-align: center;
       }
       /* تطبيق خط توقيع مناسب حسب لغة التوقيع */
-      .signature .sig-text[lang="ar"] {
-        font-size: 60px;           /* تكبير حجم الخط */
-        color: #003366;            /* لون أغمق وأكثر فخامة */
-        transform: rotate(-3deg);
-        text-shadow: 2px 2px 5px rgba(0,0,0,0.3); /* تأثير ظل للنص */
-        letter-spacing: 2px;       /* زيادة المسافات بين الحروف */
-      }
-
+      .signature .sig-text[lang="ar"],
+.signature .sig-text[lang="en"] {
+  font-size: 48px;
+  background: linear-gradient(45deg, #0044cc, #ff0099); /* تدرج لوني */
+  -webkit-background-clip: text; /* لجعل التدرج يظهر على النص */
+  -webkit-text-fill-color: transparent; /* لجعل النص شفافًا */
+  transform: rotate(-3deg);
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+}
     .signature .sig-text[lang="en"] {
       font-family: 'Satisfy', cursive;
-      font-size: 60px;
-      color: #003366;
-      transform: rotate(-3deg);
-      text-shadow: 2px 2px 5px rgba(0,0,0,0.3);
-      letter-spacing: 1px;
+      
     }
 
       .signature p {

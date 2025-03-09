@@ -43,17 +43,23 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
     // التحقق مما إذا كان الاسم يحتوي على حروف عربية
     const isArabic = /[\u0600-\u06FF]/.test(companyName);
 
-    // كود HTML للفاتورة مع RTL، اللوجو، وتوقيع نصي بخط توقيع (Satisfy للإنجليزية وLateef للعربية)
+    // الكود الخاص بالـ HTML مع تضمين الخط العربي المطلوب
     const htmlContent = `
 <html lang="ar">
   <head>
     <meta charset="UTF-8" />
     <title>فاتورة المبيعات</title>
-    <!-- استيراد خطوط Amiri للنص العام، Satisfy للتوقيع الإنجليزي، وLateef للتوقيع العربي -->
+    <!-- استيراد خط Amiri للنص العام وخط Satisfy للتوقيع الإنجليزي -->
     <link href="https://fonts.googleapis.com/css2?family=Amiri&display=swap" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Satisfy&display=swap" rel="stylesheet" />
-    <link href="https://fonts.googleapis.com/css2?family=Lateef&display=swap" rel="stylesheet" />
     <style>
+      /* تضمين خط التوقيع العربي المخصص "alfont_com_RTL-Lustrous-Bold.otf" */
+      @font-face {
+        font-family: 'ArbCalligraphy';
+        src: url('fonts/alfont_com_RTL-Lustrous-Bold.otf') format('opentype');
+        font-weight: normal;
+        font-style: normal;
+      }
       body {
         background: #f2f2f2;
         font-family: 'Amiri', serif;
@@ -118,14 +124,14 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
         text-align: center;
       }
       /* تطبيق خط توقيع مناسب حسب لغة التوقيع */
-      .signature .sig-text[lang="en"] {
-        font-family: 'Satisfy', cursive;
+      .signature .sig-text[lang="ar"] {
+        font-family: 'ArbCalligraphy', cursive;
         font-size: 48px;
         color: #0044cc;
         transform: rotate(-3deg);
       }
-      .signature .sig-text[lang="ar"] {
-        font-family: 'Lateef', cursive;
+      .signature .sig-text[lang="en"] {
+        font-family: 'Satisfy', cursive;
         font-size: 48px;
         color: #0044cc;
         transform: rotate(-3deg);

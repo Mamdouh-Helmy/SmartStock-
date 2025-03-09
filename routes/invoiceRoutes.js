@@ -25,6 +25,9 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
     const companyLogo =
       user?.logo ||
       "https://img.freepik.com/free-psd/3d-illustration-human-avatar-profile_23-2150671142.jpg";
+    // تأكد من توفر صورة التوقيع الحقيقي (مثلاً يتم تحميلها مسبقاً على السيرفر)
+    const signatureImage =
+      user?.signatureImage || "https://via.placeholder.com/200x80?text=توقيع";
 
     // تنسيق تاريخ العملية
     const saleDate = new Date(sale.saleDate);
@@ -36,103 +39,89 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
     // توليد رقم فاتورة بصيغة M****
     const invoiceNumber = `M${Math.floor(1000 + Math.random() * 9000)}`;
 
-    // كود HTML للفاتورة مع التوقيع النصي بخط samt 7017
+    // حساب الإجمالي العام
+    const totalAmount = sale.products.reduce(
+      (acc, product) => acc + product.quantity * product.price,
+      0
+    );
+
+    // كود HTML محسّن للفاتورة مع توقيع صورة حقيقي
     const htmlContent = `
 <html lang="ar">
   <head>
     <meta charset="UTF-8" />
-    <!-- خطوط مخصصة -->
-    <link
-      href="https://fonts.googleapis.com/css2?family=Amiri&display=swap"
-      rel="stylesheet"
-    />
-    <!-- في حال رغبت بالاحتفاظ بخط Lateef يمكنك إبقاؤه، هنا اكتفينا بـ Amiri للعناوين والنص العام -->
-
-    <!-- استيراد خط samt 7017 من ملف محلي -->
+    <title>فاتورة المبيعات</title>
+    <!-- استيراد خط Amiri من جوجل -->
+    <link href="https://fonts.googleapis.com/css2?family=Amiri&display=swap" rel="stylesheet" />
     <style>
-     
-
-      * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-      }
-      html,
       body {
-        width: 100%;
-        height: 100%;
+        background: #f2f2f2;
+        font-family: 'Amiri', serif;
         margin: 0;
-        padding: 0;
+        padding: 20px;
       }
-      body {
-        font-family: "Amiri", serif;
-        direction: rtl;
-        text-align: right;
-      }
-      /* نجعل الفاتورة تملأ الشاشة كلها */
       .invoice-container {
-        width: 100%;
-        min-height: 100vh;
+        max-width: 800px;
+        margin: 0 auto;
         background: #fff;
+        box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        overflow: hidden;
       }
       .header {
-        background: linear-gradient(135deg, #4a90e2, #357ab8);
+        background: #2c3e50;
+        color: #ecf0f1;
         padding: 20px;
-        color: #fff;
         display: flex;
         justify-content: space-between;
         align-items: center;
       }
-      .company-info {
-        text-align: right;
-      }
       .company-info p {
-        margin: 4px 0;
-        font-size: 16px;
+        margin: 5px 0;
+        font-size: 18px;
       }
       .logo {
-        width: 120px;
+        width: 100px;
         height: auto;
       }
       .invoice-body {
         padding: 20px;
       }
-      .invoice-details {
-        margin-bottom: 20px;
-      }
       .invoice-details p {
-        margin: 6px 0;
-        font-size: 18px;
+        margin: 8px 0;
+        font-size: 16px;
       }
       .table {
         width: 100%;
         border-collapse: collapse;
-        margin-bottom: 20px;
+        margin-top: 20px;
       }
       .table th,
       .table td {
         border: 1px solid #ddd;
-        padding: 4px;
+        padding: 12px;
         font-size: 16px;
         text-align: center;
       }
       .table th {
-        background: #f0f0f0;
+        background: #ecf0f1;
+      }
+      .total {
+        text-align: right;
+        font-size: 20px;
+        margin-top: 20px;
+        font-weight: bold;
       }
       .signature {
         margin-top: 40px;
-        font-size: 18px;
+        text-align: center;
+      }
+      .signature img {
+        width: 200px;
+        height: auto;
       }
       .signature p {
-        margin-bottom: 10px;
-      }
-
-      /* توقيع نصي بخط samt 7017 */
-      .sig-text {
-        font-size: 32px;
-        color: #0044cc; /* لون التوقيع */
         margin-top: 10px;
-        display: inline-block;
+        font-size: 16px;
       }
     </style>
   </head>
@@ -179,10 +168,13 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
               .join("")}
           </tbody>
         </table>
+        <div class="total">
+          <p>المجموع: ${totalAmount} جنيه</p>
+        </div>
         <div class="signature">
           <p><strong>التوقيع:</strong></p>
-          <!-- التوقيع بخط samt 7017 -->
-          <span class="sig-text">${companyName}</span>
+          <!-- استخدام صورة التوقيع الحقيقي -->
+          <img src="${signatureImage}" alt="توقيع" />
         </div>
       </div>
     </div>
@@ -198,16 +190,12 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
     });
 
     const page = await browser.newPage();
-
-    // ملاحظة: تأكّد من صحة المسار إلى ملف الخط (samt7017.ttf) ضمن مشروعك.
-    // إذا لم يُعرض الخط بشكل صحيح، جرّب استخدام مسار مطلق أو تحويله إلى Base64.
     await page.setContent(htmlContent, { waitUntil: "load" });
 
     console.log("📄 إنشاء ملف PDF...");
     const pdfBuffer = await page.pdf({
       format: "A4",
       printBackground: true,
-      // لجعل الـ PDF بلا هوامش تقريباً، يمكن تقليل هذه القيم أو جعلها 0
       margin: { top: "0px", right: "0px", bottom: "0px", left: "0px" },
     });
 

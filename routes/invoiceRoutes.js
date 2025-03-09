@@ -118,12 +118,12 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
         text-align: center;
       }
       /* تطبيق خط توقيع مناسب حسب لغة التوقيع */
-      // .signature .sig-text[lang="en"] {
-      //   font-family: 'Satisfy', cursive;
-      //   font-size: 48px;
-      //   color: #0044cc;
-      //   transform: rotate(-3deg);
-      // }
+      .signature .sig-text[lang="en"] {
+        font-family: 'Satisfy', cursive;
+        font-size: 48px;
+        color: #0044cc;
+        transform: rotate(-3deg);
+      }
       .signature .sig-text[lang="ar"] {
         font-family: 'Lateef', cursive;
         font-size: 48px;

@@ -119,24 +119,14 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
         text-align: center;
       }
       /* تطبيق خط توقيع مناسب حسب لغة التوقيع */
-      @keyframes glow {
-  0% {
-    text-shadow: 0 0 5px #0044cc, 0 0 10px #0044cc, 0 0 20px #0044cc;
-  }
-  50% {
-    text-shadow: 0 0 10px #ff0099, 0 0 20px #ff0099, 0 0 30px #ff0099;
-  }
-  100% {
-    text-shadow: 0 0 5px #0044cc, 0 0 10px #0044cc, 0 0 20px #0044cc;
-  }
-}
-
-.signature .sig-text[lang="ar"],
+      .signature .sig-text[lang="ar"],
 .signature .sig-text[lang="en"] {
-  font-size: 48px;
-  color: #0044cc;
+  font-size: 40px;
+  background: linear-gradient(45deg, #0044cc, #ff0099); 
+  -webkit-background-clip: text; 
+  -webkit-text-fill-color: transparent; 
   transform: rotate(-3deg);
-  animation: glow 2s infinite; /* تطبيق التأثير الحركي */
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
 }
     .signature .sig-text[lang="en"] {
       font-family: 'Satisfy', cursive;

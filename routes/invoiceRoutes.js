@@ -24,7 +24,7 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
       user?.logo ||
       "https://img.freepik.com/free-psd/3d-illustration-human-avatar-profile_23-2150671142.jpg";
     
-    // تنسيق تاريخ العملية
+    // استخدام الوقت والتاريخ الحالي
     const now = new Date();
     const formattedDate = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
     const formattedTime = `${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}`;

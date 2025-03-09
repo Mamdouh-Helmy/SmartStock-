@@ -7,6 +7,12 @@ const router = express.Router();
 const Sale = require("../models/Sale");
 const User = require("../models/User");
 
+// حساب المسار المطلق لملف الخط
+const fontPath = path.join(__dirname, "../fonts/alfont_com_RTL-Lustrous-Bold.otf");
+// تحويل المسار إلى URL باستخدام بروتوكول file://
+// نستخدم replace لتحويل الفواصل المائلة للخلف إلى الفواصل المائلة للأمام في حال تشغيل المشروع على Windows
+const fontFileUrl = `file://${fontPath.replace(/\\/g, "/")}`;
+
 router.get("/generateInvoice/:saleId", async (req, res) => {
   const saleId = req.params.saleId;
 
@@ -43,7 +49,7 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
     // التحقق مما إذا كان الاسم يحتوي على حروف عربية
     const isArabic = /[\u0600-\u06FF]/.test(companyName);
 
-    // الكود الخاص بالـ HTML مع تضمين الخط العربي المطلوب
+    // الكود الخاص بالـ HTML مع تضمين الخط العربي باستخدام المسار المطلق
     const htmlContent = `
 <html lang="ar">
   <head>
@@ -53,10 +59,10 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
     <link href="https://fonts.googleapis.com/css2?family=Amiri&display=swap" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Satisfy&display=swap" rel="stylesheet" />
     <style>
-      /* تضمين خط التوقيع العربي المخصص "alfont_com_RTL-Lustrous-Bold.otf" */
+      /* تضمين خط التوقيع العربي المخصص "alfont_com_RTL-Lustrous-Bold.otf" باستخدام مسار مطلق */
       @font-face {
         font-family: 'ArbCalligraphy';
-        src: url('fonts/alfont_com_RTL-Lustrous-Bold.otf') format('opentype');
+        src: url('${fontFileUrl}') format('opentype');
         font-weight: normal;
         font-style: normal;
       }

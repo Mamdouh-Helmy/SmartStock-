@@ -29,7 +29,7 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
     const formattedDate = `${saleDate.getDate()}/${saleDate.getMonth() + 1}/${saleDate.getFullYear()}`;
     const formattedTime = `${saleDate.getHours()}:${saleDate.getMinutes()}:${saleDate.getSeconds()}`;
 
-    // توليد رقم الفاتورة والمجموع العام
+    // توليد رقم الفاتورة وحساب الإجمالي العام
     const invoiceNumber = `M${Math.floor(1000 + Math.random() * 9000)}`;
     const totalAmount = sale.products.reduce(
       (acc, product) => acc + product.quantity * product.price,
@@ -39,7 +39,7 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
     // التحقق مما إذا كان الاسم يحتوي على حروف عربية
     const isArabic = /[\u0600-\u06FF]/.test(companyName);
 
-    // كود HTML مُحسّن للفاتورة
+    // كود HTML للفاتورة مع تصميم متجدد
     const htmlContent = `
 <html lang="ar">
   <head>
@@ -67,7 +67,7 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
         box-shadow: 0 4px 8px rgba(0,0,0,0.1);
       }
       .invoice-header {
-        background: linear-gradient(135deg, #0044cc, #0066ff);
+        background: linear-gradient(135deg, #E53935, #FF7043);
         color: #fff;
         padding: 20px;
         display: flex;
@@ -102,7 +102,8 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
         border-collapse: collapse;
         margin-bottom: 20px;
       }
-      .products-table th, .products-table td {
+      .products-table th,
+      .products-table td {
         border: 1px solid #ddd;
         padding: 10px;
         font-size: 16px;
@@ -125,7 +126,7 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
       }
       .signature .sig-text {
         font-size: 40px;
-        background: linear-gradient(45deg, #0044cc, #ff0099);
+        background: linear-gradient(45deg, #E53935, #FF7043);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         transform: rotate(-3deg);

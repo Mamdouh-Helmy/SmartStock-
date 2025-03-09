@@ -22,18 +22,10 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
     const companyName = user?.name || "اسم الشركة";
     const companyAddress = user?.address || "عنوان الشركة";
     const companyPhone = user?.phone || "هاتف الشركة";
-    const companyLogo =
-      user?.logo ||
-      "https://img.freepik.com/free-psd/3d-illustration-human-avatar-profile_23-2150671142.jpg";
-    // تأكد من توفر صورة التوقيع الحقيقي (مثلاً يتم تحميلها مسبقاً على السيرفر)
-    const signatureImage =
-      user?.signatureImage || "https://via.placeholder.com/200x80?text=توقيع";
 
     // تنسيق تاريخ العملية
     const saleDate = new Date(sale.saleDate);
-    const formattedDate = `${saleDate.getDate()}/${
-      saleDate.getMonth() + 1
-    }/${saleDate.getFullYear()}`;
+    const formattedDate = `${saleDate.getDate()}/${saleDate.getMonth() + 1}/${saleDate.getFullYear()}`;
     const formattedTime = `${saleDate.getHours()}:${saleDate.getMinutes()}:${saleDate.getSeconds()}`;
 
     // توليد رقم فاتورة بصيغة M****
@@ -45,20 +37,23 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
       0
     );
 
-    // كود HTML محسّن للفاتورة مع توقيع صورة حقيقي
+    // كود HTML للفاتورة مع تنسيق RTL وتوقيع بنص بخط توقيع يشبه توقيع لاعب كوره (باستخدام خط Satisfy)
     const htmlContent = `
 <html lang="ar">
   <head>
     <meta charset="UTF-8" />
     <title>فاتورة المبيعات</title>
-    <!-- استيراد خط Amiri من جوجل -->
+    <!-- استيراد خطوط Amiri للنص العام وخط Satisfy للتوقيع -->
     <link href="https://fonts.googleapis.com/css2?family=Amiri&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Satisfy&display=swap" rel="stylesheet" />
     <style>
       body {
         background: #f2f2f2;
         font-family: 'Amiri', serif;
         margin: 0;
         padding: 20px;
+        direction: rtl;
+        text-align: right;
       }
       .invoice-container {
         max-width: 800px;
@@ -78,10 +73,6 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
       .company-info p {
         margin: 5px 0;
         font-size: 18px;
-      }
-      .logo {
-        width: 100px;
-        height: auto;
       }
       .invoice-body {
         padding: 20px;
@@ -115,9 +106,10 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
         margin-top: 40px;
         text-align: center;
       }
-      .signature img {
-        width: 200px;
-        height: auto;
+      .signature .sig-text {
+        font-family: 'Satisfy', cursive;
+        font-size: 48px;
+        color: #0044cc;
       }
       .signature p {
         margin-top: 10px;
@@ -132,9 +124,6 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
           <p><strong>اسم الشركة:</strong> ${companyName}</p>
           <p><strong>العنوان:</strong> ${companyAddress}</p>
           <p><strong>الهاتف:</strong> ${companyPhone}</p>
-        </div>
-        <div>
-          <img src="${companyLogo}" alt="Logo" class="logo" />
         </div>
       </div>
       <div class="invoice-body">
@@ -154,18 +143,14 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
             </tr>
           </thead>
           <tbody>
-            ${sale.products
-              .map(
-                (product) => `
+            ${sale.products.map(product => `
               <tr>
                 <td>${product.productName}</td>
                 <td>${product.quantity}</td>
                 <td>${product.price} جنيه</td>
                 <td>${product.quantity * product.price} جنيه</td>
               </tr>
-            `
-              )
-              .join("")}
+            `).join('')}
           </tbody>
         </table>
         <div class="total">
@@ -173,8 +158,8 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
         </div>
         <div class="signature">
           <p><strong>التوقيع:</strong></p>
-          <!-- استخدام صورة التوقيع الحقيقي -->
-          <img src="${signatureImage}" alt="توقيع" />
+          <!-- التوقيع كنص باستخدام خط Satisfy -->
+          <span class="sig-text">${companyName}</span>
         </div>
       </div>
     </div>
@@ -210,10 +195,7 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
     const filePath = path.join(invoicesDir, `invoice_${saleId}.pdf`);
     fs.writeFileSync(filePath, pdfBuffer);
 
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename=invoice_${saleId}.pdf`
-    );
+    res.setHeader("Content-Disposition", `attachment; filename=invoice_${saleId}.pdf`);
     res.setHeader("Content-Type", "application/pdf");
     res.download(filePath);
   } catch (err) {

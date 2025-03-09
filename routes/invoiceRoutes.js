@@ -7,11 +7,10 @@ const router = express.Router();
 const Sale = require("../models/Sale");
 const User = require("../models/User");
 
-// حساب المسار المطلق لملف الخط
-const fontPath = path.join(__dirname, "../fonts/Areeq Al Gafelh.ttf");
-// تحويل المسار إلى URL باستخدام بروتوكول file://
-// نستخدم replace لتحويل الفواصل المائلة للخلف إلى الفواصل المائلة للأمام في حال تشغيل المشروع على Windows
-const fontFileUrl = `file://${fontPath.replace(/\\/g, "/")}`;
+// حساب المسار المطلق لملف الخط الجديد "Deco Type Thuluth II.ttf"
+const fontPath = path.join(__dirname, "../fonts/Deco Type Thuluth II.ttf");
+// تحويل المسار إلى URL باستخدام بروتوكول file:// وترميز URL باستخدام encodeURI
+const fontFileUrl = encodeURI(`file://${fontPath.replace(/\\/g, "/")}`);
 
 router.get("/generateInvoice/:saleId", async (req, res) => {
   const saleId = req.params.saleId;
@@ -49,7 +48,7 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
     // التحقق مما إذا كان الاسم يحتوي على حروف عربية
     const isArabic = /[\u0600-\u06FF]/.test(companyName);
 
-    // الكود الخاص بالـ HTML مع تضمين الخط العربي باستخدام المسار المطلق
+    // الكود الخاص بالـ HTML مع تضمين الخط العربي باستخدام المسار المطلق المُرمَّز
     const htmlContent = `
 <html lang="ar">
   <head>
@@ -59,7 +58,7 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
     <link href="https://fonts.googleapis.com/css2?family=Amiri&display=swap" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Satisfy&display=swap" rel="stylesheet" />
     <style>
-      /* تضمين خط التوقيع العربي "Areeq Al Gafelh.ttf" باستخدام مسار مطلق */
+      /* تضمين خط التوقيع العربي "Deco Type Thuluth II.ttf" باستخدام مسار مطلق مُرمَّز */
       @font-face {
         font-family: 'ArbCalligraphy';
         src: url('${fontFileUrl}') format('truetype');
@@ -205,7 +204,7 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
     const browser = await puppeteer.launch({
       headless: chromium.headless,
       executablePath: await chromium.executablePath(),
-      args: chromium.args,
+      args: [...chromium.args, "--allow-file-access-from-files"]
     });
 
     const page = await browser.newPage();

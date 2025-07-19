@@ -16,7 +16,6 @@
   "description": "",
   "dependencies": {
     "bcryptjs": "^2.4.3",
-    "chrome-aws-lambda": "^10.1.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
@@ -26,7 +25,6 @@
     "jspdf-autotable": "^3.8.4",
     "mongoose": "^8.16.4",
     "morgan": "^1.10.0",
-    "puppeteer-core": "^10.4.0",
     "socket.io": "^4.8.1"
   },
   "devDependencies": {

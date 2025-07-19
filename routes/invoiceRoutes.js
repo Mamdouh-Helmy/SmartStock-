@@ -1,8 +1,6 @@
-
-const { jsPDF } = require("jspdf");
-require("jspdf-autotable");
-const path = require("path");
+const PDFDocument = require("pdfkit");
 const fs = require("fs").promises;
+const path = require("path");
 const express = require("express");
 const router = express.Router();
 const Sale = require("../models/Sale");
@@ -30,54 +28,123 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
       0
     );
 
-    const doc = new jsPDF();
-    // تحميل خط Amiri
-    try {
-      const fontPath = path.join(__dirname, "fonts", "Amiri-Regular.ttf");
-      const fontBytes = await fs.readFile(fontPath);
-      doc.addFileToVFS("Amiri-Regular.ttf", fontBytes.toString("base64"));
-      doc.addFont("Amiri-Regular.ttf", "Amiri", "normal");
-      doc.setFont("Amiri");
-    } catch (fontError) {
-      console.error("❌ خطأ في تحميل خط Amiri:", fontError);
-      doc.setFont("Helvetica"); // استخدام خط بديل إذا فشل تحميل Amiri
-    }
-    doc.setFontSize(12);
-
-    // إضافة محتوى الفاتورة
-    doc.text(`اسم الشركة: ${companyName}`, 10, 10, { align: "right" });
-    doc.text(`العنوان: ${companyAddress}`, 10, 20, { align: "right" });
-    doc.text(`الهاتف: ${companyPhone}`, 10, 30, { align: "right" });
-    doc.text(`رقم الفاتورة: ${invoiceNumber}`, 10, 40, { align: "right" });
-    doc.text(`التاريخ: ${formattedDate}`, 10, 50, { align: "right" });
-    doc.text(`الوقت: ${formattedTime}`, 10, 60, { align: "right" });
-    doc.text(`اسم العميل: ${sale.customerName}`, 10, 70, { align: "right" });
-
-    const tableData = sale.products.map((product) => [
-      product.productName,
-      product.quantity,
-      product.price,
-      product.quantity * product.price,
-    ]);
-
-    doc.autoTable({
-      head: [["المنتج", "الكمية", "السعر", "الإجمالي"]],
-      body: tableData,
-      startY: 80,
-      styles: { font: doc.getFont().fontName, halign: "right", fontSize: 10 },
-      headStyles: { fillColor: [44, 62, 80], textColor: [255, 255, 255] },
-      margin: { right: 10, left: 10 },
+    // إنشاء مستند PDF جديد
+    const doc = new PDFDocument({
+      size: "A4",
+      layout: "portrait",
+      bufferPages: true,
     });
 
-    doc.text(`المجموع: ${totalAmount} جنيه`, 10, doc.lastAutoTable.finalY + 10, { align: "right" });
+    // إعداد الخط باستخدام Base64
+    const amiriFontBase64 = "YOUR_BASE64_ENCODED_AMIRI_FONT_HERE"; // استبدل بنص Base64
+    try {
+      doc.registerFont("Amiri", Buffer.from(amiriFontBase64, "base64"));
+      doc.font("Amiri");
+    } catch (fontError) {
+      console.error("❌ خطأ في تحميل خط Amiri:", fontError);
+      doc.font("Helvetica"); // استخدام خط بديل
+    }
+    doc.fontSize(12);
 
-    const pdfBuffer = doc.output("arraybuffer");
+    // إعداد تدفق لتخزين ملف PDF
     const invoicesDir = "/tmp/invoices";
     await fs.mkdir(invoicesDir, { recursive: true });
     const filePath = path.join(invoicesDir, `invoice_${saleId}.pdf`);
-    await fs.writeFile(filePath, Buffer.from(pdfBuffer));
+    const writeStream = require("fs").createWriteStream(filePath);
+    doc.pipe(writeStream);
 
-    res.setHeader("Content-Disposition", `attachment; filename=invoice_${saleId}.pdf`);
+    // إضافة محتوى الفاتورة (من اليمين لليسار)
+    const pageWidth = doc.page.width; // عرض الصفحة (595 نقطة لـ A4)
+    const margin = 50;
+    const rightEdge = pageWidth - margin;
+
+    doc.text(`اسم الشركة: ${companyName}`, rightEdge, 50, { align: "right" });
+    doc.text(`العنوان: ${companyAddress}`, rightEdge, 60, { align: "right" });
+    doc.text(`الهاتف: ${companyPhone}`, rightEdge, 70, { align: "right" });
+    doc.text(`رقم الفاتورة: ${invoiceNumber}`, rightEdge, 80, {
+      align: "right",
+    });
+    doc.text(`التاريخ: ${formattedDate}`, rightEdge, 90, { align: "right" });
+    doc.text(`الوقت: ${formattedTime}`, rightEdge, 100, { align: "right" });
+    doc.text(`اسم العميل: ${sale.customerName}`, rightEdge, 110, {
+      align: "right",
+    });
+
+    // إنشاء جدول يدويًا
+    const tableTop = 130;
+    const rowHeight = 20;
+    const columnWidths = [200, 100, 100, 100];
+    const tableHeaders = ["المنتج", "الكمية", "السعر", "الإجمالي"];
+
+    // رسم رأس الجدول
+    doc.fontSize(10);
+    let x = rightEdge;
+    for (let i = 0; i < tableHeaders.length; i++) {
+      doc.text(tableHeaders[i], x - columnWidths[i], tableTop, {
+        width: columnWidths[i],
+        align: "right",
+      });
+      x -= columnWidths[i];
+    }
+
+    // رسم خط أفقي تحت رأس الجدول
+    doc
+      .moveTo(margin, tableTop + 15)
+      .lineTo(pageWidth - margin, tableTop + 15)
+      .stroke();
+
+    // إضافة بيانات الجدول
+    let y = tableTop + rowHeight;
+    sale.products.forEach((product) => {
+      x = rightEdge;
+      doc.text(product.productName, x - columnWidths[0], y, {
+        width: columnWidths[0],
+        align: "right",
+      });
+      x -= columnWidths[0];
+      doc.text(product.quantity.toString(), x - columnWidths[1], y, {
+        width: columnWidths[1],
+        align: "right",
+      });
+      x -= columnWidths[1];
+      doc.text(product.price.toString(), x - columnWidths[2], y, {
+        width: columnWidths[2],
+        align: "right",
+      });
+      x -= columnWidths[2];
+      doc.text(
+        (product.quantity * product.price).toString(),
+        x - columnWidths[3],
+        y,
+        {
+          width: columnWidths[3],
+          align: "right",
+        }
+      );
+      y += rowHeight;
+    });
+
+    // رسم خط أفقي تحت الجدول
+    doc
+      .moveTo(margin, y + 5)
+      .lineTo(pageWidth - margin, y + 5)
+      .stroke();
+
+    // إضافة المجموع
+    doc.text(`المجموع: ${totalAmount} جنيه`, rightEdge, y + 15, {
+      align: "right",
+    });
+
+    // إنهاء المستند
+    doc.end();
+
+    // الانتظار حتى ينتهي تدفق الكتابة
+    await new Promise((resolve) => writeStream.on("finish", resolve));
+
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=invoice_${saleId}.pdf`
+    );
     res.setHeader("Content-Type", "application/pdf");
     res.sendFile(filePath, async (err) => {
       if (err) {
@@ -93,7 +160,9 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
     });
   } catch (err) {
     console.error("❌ خطأ أثناء إنشاء الفاتورة:", err);
-    res.status(500).json({ message: "خطأ في إنشاء الفاتورة", error: err.message });
+    res
+      .status(500)
+      .json({ message: "خطأ في إنشاء الفاتورة", error: err.message });
   }
 });
 

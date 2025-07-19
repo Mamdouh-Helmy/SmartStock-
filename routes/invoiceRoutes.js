@@ -1,12 +1,10 @@
-const puppeteer = require("puppeteer-core");
-const chromium = require("@sparticuz/chromium");
-const express = require("express");
-const router = express.Router();
-const Sale = require("../models/Sale");
-const User = require("../models/User");
+const chromium = require('chrome-aws-lambda');
+const puppeteer = require('puppeteer-core');
+const Sale = require('../models/Sale');
+const User = require('../models/User');
 
-router.get("/generateInvoice/:saleId", async (req, res) => {
-  const saleId = req.params.saleId;
+module.exports = async (req, res) => {
+  const { saleId } = req.query;
 
   try {
     const sale = await Sale.findById(saleId);
@@ -182,17 +180,17 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
     `;
 
     const browser = await puppeteer.launch({
-      headless: chromium.headless,
       args: chromium.args,
-      executablePath: await chromium.executablePath(),
       defaultViewport: chromium.defaultViewport,
-      ignoreHTTPSErrors: true
+      executablePath: await chromium.executablePath || '/usr/bin/chromium-browser',
+      headless: chromium.headless,
+      ignoreHTTPSErrors: true,
     });
 
     const page = await browser.newPage();
-    await page.setContent(htmlContent, { waitUntil: "load" });
+    await page.setContent(htmlContent, { waitUntil: 'load' });
     const pdfBuffer = await page.pdf({
-      format: "A4",
+      format: 'A4',
       printBackground: true,
       margin: { top: "0px", right: "0px", bottom: "0px", left: "0px" },
     });
@@ -200,13 +198,10 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
 
     res.setHeader("Content-Disposition", `attachment; filename=invoice_${saleId}.pdf`);
     res.setHeader("Content-Type", "application/pdf");
-    res.send(pdfBuffer);
+    return res.status(200).send(pdfBuffer);
 
   } catch (err) {
     console.error("❌ خطأ أثناء إنشاء الفاتورة:", err.message);
-    console.error(err.stack);
-    res.status(500).json({ message: "خطأ في إنشاء الفاتورة", error: err.message });
+    return res.status(500).json({ message: "فشل إنشاء الفاتورة", error: err.message });
   }
-});
-
-module.exports = router;
+};

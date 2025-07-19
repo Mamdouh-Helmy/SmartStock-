@@ -91,6 +91,7 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
       try {
         await fs.unlink(filePath);
         console.log("🗑️ تم حذف ملف الفاتورة بنجاح");
+        console.log("🗑️ تم حذف ملف الفاتورة بنجاح");
       } catch (unlinkErr) {
         console.error("❌ خطأ أثناء حذف الملف:", unlinkErr);
       }

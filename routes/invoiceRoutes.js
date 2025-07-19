@@ -1,3 +1,4 @@
+
 const { jsPDF } = require("jspdf");
 require("jspdf-autotable");
 const path = require("path");
@@ -30,14 +31,17 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
     );
 
     const doc = new jsPDF();
-    // إضافة خط Amiri (يجب توفير الملف في المشروع)
-    // تحميل ملف Amiri-Regular.ttf من Google Fonts أو مصدر موثوق
-    // ضع الملف في مجلد مثل /fonts/Amiri-Regular.ttf
-    const fontPath = path.join(__dirname, "fonts", "Amiri-Regular.ttf");
-    const fontBytes = await fs.readFile(fontPath);
-    doc.addFileToVFS("Amiri-Regular.ttf", fontBytes.toString("base64"));
-    doc.addFont("Amiri-Regular.ttf", "Amiri", "normal");
-    doc.setFont("Amiri");
+    // تحميل خط Amiri
+    try {
+      const fontPath = path.join(__dirname, "fonts", "Amiri-Regular.ttf");
+      const fontBytes = await fs.readFile(fontPath);
+      doc.addFileToVFS("Amiri-Regular.ttf", fontBytes.toString("base64"));
+      doc.addFont("Amiri-Regular.ttf", "Amiri", "normal");
+      doc.setFont("Amiri");
+    } catch (fontError) {
+      console.error("❌ خطأ في تحميل خط Amiri:", fontError);
+      doc.setFont("Helvetica"); // استخدام خط بديل إذا فشل تحميل Amiri
+    }
     doc.setFontSize(12);
 
     // إضافة محتوى الفاتورة
@@ -60,17 +64,12 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
       head: [["المنتج", "الكمية", "السعر", "الإجمالي"]],
       body: tableData,
       startY: 80,
-      styles: { font: "Amiri", halign: "right", fontSize: 10 },
+      styles: { font: doc.getFont().fontName, halign: "right", fontSize: 10 },
       headStyles: { fillColor: [44, 62, 80], textColor: [255, 255, 255] },
       margin: { right: 10, left: 10 },
     });
 
-    doc.text(
-      `المجموع: ${totalAmount} جنيه`,
-      10,
-      doc.lastAutoTable.finalY + 10,
-      { align: "right" }
-    );
+    doc.text(`المجموع: ${totalAmount} جنيه`, 10, doc.lastAutoTable.finalY + 10, { align: "right" });
 
     const pdfBuffer = doc.output("arraybuffer");
     const invoicesDir = "/tmp/invoices";
@@ -78,10 +77,7 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
     const filePath = path.join(invoicesDir, `invoice_${saleId}.pdf`);
     await fs.writeFile(filePath, Buffer.from(pdfBuffer));
 
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename=invoice_${saleId}.pdf`
-    );
+    res.setHeader("Content-Disposition", `attachment; filename=invoice_${saleId}.pdf`);
     res.setHeader("Content-Type", "application/pdf");
     res.sendFile(filePath, async (err) => {
       if (err) {
@@ -91,16 +87,13 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
       try {
         await fs.unlink(filePath);
         console.log("🗑️ تم حذف ملف الفاتورة بنجاح");
-        console.log("🗑️ تم حذف ملف الفاتورة بنجاح");
       } catch (unlinkErr) {
         console.error("❌ خطأ أثناء حذف الملف:", unlinkErr);
       }
     });
   } catch (err) {
     console.error("❌ خطأ أثناء إنشاء الفاتورة:", err);
-    res
-      .status(500)
-      .json({ message: "خطأ في إنشاء الفاتورة", error: err.message });
+    res.status(500).json({ message: "خطأ في إنشاء الفاتورة", error: err.message });
   }
 });
 

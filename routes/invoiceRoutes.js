@@ -1,5 +1,5 @@
 const puppeteer = require("puppeteer-core");
-const chromium = require("@sparticuz/chromium");
+const chromium = require("chrome-aws-lambda");
 const path = require("path");
 const fs = require("fs");
 const express = require("express");
@@ -23,25 +23,25 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
     const companyLogo =
       user?.logo ||
       "https://img.freepik.com/free-psd/3d-illustration-human-avatar-profile_23-2150671142.jpg";
-    
-    // استخدام الوقت والتاريخ الحالي مع تحديد المنطقة الزمنية المطلوبة (مثلاً منطقة القاهرة)
+
+    // استخدام الوقت والتاريخ الحالي مع تحديد المنطقة الزمنية (القاهرة)
     const now = new Date();
-    const options = { timeZone: 'Africa/Cairo', hour12: false };
-    const formattedDate = now.toLocaleDateString('ar-EG', options);
-    const formattedTime = now.toLocaleTimeString('ar-EG', options);
-    
+    const options = { timeZone: "Africa/Cairo", hour12: false };
+    const formattedDate = now.toLocaleDateString("ar-EG", options);
+    const formattedTime = now.toLocaleTimeString("ar-EG", options);
+
     // توليد رقم فاتورة بصيغة M****
     const invoiceNumber = `M${Math.floor(1000 + Math.random() * 9000)}`;
-    
+
     // حساب الإجمالي العام
     const totalAmount = sale.products.reduce(
       (acc, product) => acc + product.quantity * product.price,
       0
     );
-    
+
     // التحقق مما إذا كان الاسم يحتوي على حروف عربية
     const isArabic = /[\u0600-\u06FF]/.test(companyName);
-    
+
     // كود HTML للفاتورة مع التصميم المحسن
     const htmlContent = `
 <html lang="ar">
@@ -119,7 +119,6 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
         margin-top: 20px;
         text-align: center;
       }
-      /* تصميم توقيع مع تأثير تدرج وظل للنص */
       .signature .sig-text[lang="ar"],
       .signature .sig-text[lang="en"] {
         font-size: 48px;
@@ -187,7 +186,6 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
         </div>
         <div class="signature">
           <p><strong>التوقيع:</strong></p>
-          <!-- تحديد لغة التوقيع بناءً على محتوى الاسم -->
           <span class="sig-text" lang="${isArabic ? "ar" : "en"}">${companyName}</span>
           <p>شكراً لتعاملكم معانا</p>
         </div>
@@ -198,13 +196,20 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
 `;
 
     console.log("🚀 بدء تشغيل Puppeteer...");
-    const browser = await puppeteer.launch({
-      headless: chromium.headless,
-      executablePath: await chromium.executablePath(),
+    const browser = await chromium.puppeteer.launch({
       args: chromium.args,
+      defaultViewport: chromium.defaultViewport,
+      executablePath: await chromium.executablePath,
+      headless: true,
     });
     const page = await browser.newPage();
-    await page.setContent(htmlContent, { waitUntil: "load" });
+
+    // تحسين التعامل مع تحميل الخطوط
+    await page.setContent(htmlContent, {
+      waitUntil: "networkidle0", // انتظار تحميل جميع الموارد
+      timeout: 60000, // زيادة المهلة لتحميل الخطوط
+    });
+
     console.log("📄 إنشاء ملف PDF...");
     const pdfBuffer = await page.pdf({
       format: "A4",
@@ -213,18 +218,30 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
     });
     await browser.close();
     console.log("✅ تم إنشاء PDF بنجاح!");
-    const invoicesDir = path.join(__dirname, "../invoices");
+
+    // استخدام /tmp لتخزين الملفات على Vercel
+    const invoicesDir = "/tmp/invoices";
     if (!fs.existsSync(invoicesDir)) {
       fs.mkdirSync(invoicesDir, { recursive: true });
     }
     const filePath = path.join(invoicesDir, `invoice_${saleId}.pdf`);
     fs.writeFileSync(filePath, pdfBuffer);
+
     res.setHeader("Content-Disposition", `attachment; filename=invoice_${saleId}.pdf`);
     res.setHeader("Content-Type", "application/pdf");
-    res.download(filePath);
+    res.sendFile(filePath, (err) => {
+      if (err) {
+        console.error("❌ خطأ أثناء إرسال الملف:", err);
+        res.status(500).json({ message: "خطأ في إرسال الفاتورة" });
+      }
+      // تنظيف الملف بعد الإرسال
+      fs.unlink(filePath, (unlinkErr) => {
+        if (unlinkErr) console.error("❌ خطأ أثناء حذف الملف:", unlinkErr);
+      });
+    });
   } catch (err) {
     console.error("❌ خطأ أثناء إنشاء الفاتورة:", err);
-    res.status(500).json({ message: "خطأ في إنشاء الفاتورة" });
+    res.status(500).json({ message: "خطأ في إنشاء الفاتورة", error: err.message });
   }
 });
 

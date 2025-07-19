@@ -15,6 +15,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@sparticuz/chromium": "^133.0.0",
     "bcryptjs": "^2.4.3",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
@@ -26,6 +27,7 @@
     "mongoose": "^8.16.4",
     "morgan": "^1.10.0",
     "pdfkit": "^0.17.1",
+    "puppeteer-core": "^24.14.0",
     "socket.io": "^4.8.1"
   },
   "devDependencies": {

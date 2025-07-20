@@ -8,19 +8,19 @@ const router = express.Router();
 
 router.get("/generateInvoice/:saleId", async (req, res) => {
   try {
-    // 1. جلب عملية البيع
+    // 1. جلب بيانات عملية البيع من قاعدة البيانات
     const sale = await Sale.findById(req.params.saleId);
     if (!sale) {
-      return res.status(404).json({ message: "العملية غير موجودة" });
+      return res.status(404).json({ message: "عملية البيع غير موجودة" });
     }
 
-    // 2. جلب بيانات الشركة
+    // 2. جلب بيانات الشركة (المستخدم الأول في النظام)
     const user = await User.findOne();
     if (!user) {
       return res.status(500).json({ message: "بيانات الشركة غير متوفرة" });
     }
 
-    // 3. استيراد React-PDF ديناميكياً
+    // 3. استيراد مكتبة React-PDF بشكل ديناميكي
     const ReactPDF = await import("@react-pdf/renderer");
     const {
       Document,
@@ -32,13 +32,30 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
       pdf,
     } = ReactPDF;
 
-    // 4. مكون الوثيقة
+    // 4. تعريف مكون الفاتورة
     function InvoiceDocument({ sale, user }) {
-      const totalAmount = sale.products.reduce((sum, p) => sum + p.quantity * p.price, 0);
-      const now = `${new Date().toLocaleDateString("ar-EG", { timeZone: "Africa/Cairo", hour12: false })} ${new Date().toLocaleTimeString("ar-EG", { timeZone: "Africa/Cairo", hour12: false })}`;
+      // حساب المبلغ الإجمالي
+      const totalAmount = sale.products.reduce(
+        (sum, p) => sum + p.quantity * p.price,
+        0
+      );
+      
+      // تاريخ ووقت إنشاء الفاتورة
+      const now = `${new Date().toLocaleDateString("ar-EG", {
+        timeZone: "Africa/Cairo",
+        hour12: false,
+      })} ${new Date().toLocaleTimeString("ar-EG", {
+        timeZone: "Africa/Cairo",
+        hour12: false,
+      })}`;
+      
+      // رقم فاتورة عشوائي
       const invoiceNumber = `M${Math.floor(1000 + Math.random() * 9000)}`;
+      
+      // التحقق إذا كان اسم الشركة يحتوي على أحرف عربية
       const isArabic = /[\u0600-\u06FF]/.test(user.name);
 
+      // تعريف التنسيقات
       const styles = StyleSheet.create({
         page: { fontSize: 12, padding: 20, direction: "rtl" },
         header: {
@@ -55,7 +72,12 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
         tableRow: { flexDirection: "row" },
         tableCol: { flex: 1, borderWidth: 1, borderColor: "#ddd", padding: 4 },
         tableCell: { textAlign: "center" },
-        total: { textAlign: "right", marginTop: 10, fontSize: 14, fontWeight: "bold" },
+        total: {
+          textAlign: "right",
+          marginTop: 10,
+          fontSize: 14,
+          fontWeight: "bold",
+        },
         signature: { alignItems: "center", marginTop: 20 },
         sigText: { fontSize: 24 },
       });
@@ -66,6 +88,7 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
         React.createElement(
           Page,
           { size: "A4", style: styles.page },
+          // رأس الفاتورة
           React.createElement(
             View,
             { style: styles.header },
@@ -76,8 +99,10 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
               React.createElement(Text, null, `العنوان: ${user.address}`),
               React.createElement(Text, null, `الهاتف: ${user.phone}`)
             ),
-            user.logo && React.createElement(Image, { style: styles.logo, src: user.logo })
+            user.logo &&
+              React.createElement(Image, { style: styles.logo, src: user.logo })
           ),
+          // تفاصيل الفاتورة
           React.createElement(
             View,
             { style: styles.section },
@@ -85,9 +110,11 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
             React.createElement(Text, null, `التاريخ والوقت: ${now}`),
             React.createElement(Text, null, `اسم العميل: ${sale.customerName}`)
           ),
+          // جدول المنتجات
           React.createElement(
             View,
             { style: styles.table },
+            // عناوين الجدول
             React.createElement(
               View,
               { style: styles.tableRow },
@@ -99,6 +126,7 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
                 )
               )
             ),
+            // بيانات المنتجات
             sale.products.map((p, i) =>
               React.createElement(
                 View,
@@ -126,6 +154,7 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
               )
             )
           ),
+          // المجموع والتوقيع
           React.createElement(Text, { style: styles.total }, `المجموع: ${totalAmount} جنيه`),
           React.createElement(
             View,
@@ -138,21 +167,22 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
       );
     }
 
-    // 5. توليد PDF في الذاكرة
+    // 5. توليد PDF وإرساله
     const element = React.createElement(InvoiceDocument, { sale, user });
-    const pdfDoc = pdf(element);
-    const pdfBuffer = await pdfDoc.toBuffer();
+    const pdfStream = await pdf(element).toBuffer();
 
-    // 6. تأكيد وجود Buffer صالح
-    if (!pdfBuffer || !Buffer.isBuffer(pdfBuffer)) {
-      return res.status(500).json({ message: "فشل في توليد الفاتورة." });
+    // تجميع الـ chunks في buffer
+    const chunks = [];
+    for await (const chunk of pdfStream) {
+      chunks.push(chunk);
     }
+    const pdfBuffer = Buffer.concat(chunks);
 
-    // 7. إرسال الملف كـ PDF
+    // إعداد رؤوس الاستجابة وإرسال الملف
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `attachment; filename=invoice_${sale._id}.pdf`);
     res.setHeader("Content-Length", pdfBuffer.length);
-    return res.send(pdfBuffer);
+    res.send(pdfBuffer);
   } catch (err) {
     console.error("❌ خطأ أثناء إنشاء الفاتورة:", err);
     return res.status(500).json({ message: "خطأ في إنشاء الفاتورة" });

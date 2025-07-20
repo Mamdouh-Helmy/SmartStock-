@@ -7,6 +7,13 @@ const path = require("path");
 
 const router = express.Router();
 
+// دالة لترميز اسم الملف للرؤوس
+const encodeFilenameForHeader = (filename) => {
+  return encodeURIComponent(filename)
+    .replace(/['()]/g, escape)
+    .replace(/\*/g, "%2A");
+};
+
 router.get("/generateInvoice/:saleId", async (req, res) => {
   try {
     // 1. جلب بيانات عملية البيع
@@ -21,19 +28,23 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
       return res.status(500).json({ message: "بيانات الشركة غير متوفرة" });
     }
 
-    // 3. استيراد React-PDF
+    // 3. استيراد مكتبة React-PDF
     const ReactPDF = await import("@react-pdf/renderer");
     const { Document, Page, View, Text, StyleSheet, Image, pdf, Font } = ReactPDF;
 
-    // 4. حل مشكلة الخط العربي
+    // 4. تهيئة الخط العربي
     Font.registerHyphenationCallback((word) => [word]);
     
-    // تسجيل خط عربي من خلال رابط مباشر
     Font.register({
-      family: "NotoArabic",
+      family: "ArabicFont",
       fonts: [
         {
-          src: "https://fonts.gstatic.com/s/notonaskharabic/v18/RrQ5bpV-9Dd1b1OAGA6M9PkyDuVBePeKNaxcsss0Y7bwj85krK0z9_Mnuw.ttf",
+          src: "https://fonts.gstatic.com/s/amiri/v27/J7aRnpd8CGxBHpUrtLMA7w.woff2",
+          fontWeight: 400,
+        },
+        {
+          src: "https://fonts.gstatic.com/s/amiri/v27/J7aRnpd8CGxBHpUgtbMA7w.woff2",
+          fontWeight: 700,
         },
       ],
     });
@@ -55,7 +66,7 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
       const styles = StyleSheet.create({
         page: {
           padding: 40,
-          fontFamily: "NotoArabic",
+          fontFamily: "ArabicFont",
           direction: "rtl",
           textAlign: "right",
           lineHeight: 1.5
@@ -208,7 +219,7 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
       );
     }
 
-    // 6. توليد وإرسال PDF
+    // 6. توليد ملف PDF
     const element = React.createElement(InvoiceDocument, { sale, user });
     const pdfStream = await pdf(element).toBuffer();
 
@@ -218,8 +229,15 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
     }
     const pdfBuffer = Buffer.concat(chunks);
 
+    // 7. إعداد رؤوس الاستجابة
+    const filename = `invoice_${sale._id}.pdf`;
+    const encodedFilename = encodeFilenameForHeader(filename);
+
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `attachment; filename=فاتورة_${sale._id}.pdf`);
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${encodedFilename}"; filename*=UTF-8''${encodedFilename}`
+    );
     res.setHeader("Content-Length", pdfBuffer.length);
     res.send(pdfBuffer);
 

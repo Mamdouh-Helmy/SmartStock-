@@ -11,13 +11,11 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
   const saleId = req.params.saleId;
 
   try {
-    // 1. جلب بيانات العملية
     const sale = await Sale.findById(saleId);
     if (!sale) {
       return res.status(404).json({ message: "العملية غير موجودة" });
     }
 
-    // 2. جلب بيانات المستخدم لاستخدامها في الفاتورة
     const user = await User.findOne();
     const companyName = user?.name || "اسم الشركة";
     const companyAddress = user?.address || "عنوان الشركة";
@@ -26,24 +24,17 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
       user?.logo ||
       "https://img.freepik.com/free-psd/3d-illustration-human-avatar-profile_23-2150671142.jpg";
 
-    // 3. تنسيق التاريخ والوقت بمنطقة القاهرة
     const now = new Date();
-    const options = { timeZone: "Africa/Cairo", hour12: false };
-    const formattedDate = now.toLocaleDateString("ar-EG", options);
-    const formattedTime = now.toLocaleTimeString("ar-EG", options);
+    const opts = { timeZone: "Africa/Cairo", hour12: false };
+    const formattedDate = now.toLocaleDateString("ar-EG", opts);
+    const formattedTime = now.toLocaleTimeString("ar-EG", opts);
 
-    // 4. رقم الفاتورة
     const invoiceNumber = `M${Math.floor(1000 + Math.random() * 9000)}`;
-
-    // 5. حساب المجمو‍ع
     const totalAmount = sale.products.reduce(
-      (acc, p) => acc + p.quantity * p.price,
+      (a, p) => a + p.quantity * p.price,
       0
     );
-
-    // 6. تحقق إذا الاسم عربي (لتنسيق التوقيع)
     const isArabic = /[\u0600-\u06FF]/.test(companyName);
-
     // 7. HTML للفواتير
     const htmlContent = `
       <html lang="ar">
@@ -116,7 +107,9 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
               <div class="total">المجموع: ${totalAmount} جنيه</div>
               <div class="signature">
                 <p><strong>التوقيع:</strong></p>
-                <span class="sig-text" lang="${isArabic ? "ar" : "en"}">${companyName}</span>
+                <span class="sig-text" lang="${
+                  isArabic ? "ar" : "en"
+                }">${companyName}</span>
                 <p>شكراً لتعاملكم معنا</p>
               </div>
             </div>
@@ -125,7 +118,7 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
       </html>
     `;
 
-    // 8. تشغيل Puppeteer
+    // launch Chromium
     const browser = await puppeteer.launch({
       args: chromium.args,
       executablePath: await chromium.executablePath(),
@@ -140,14 +133,13 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
     });
     await browser.close();
 
-    // 9. إرسال الـPDF مباشرة
+    // Send PDF buffer directly
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader(
       "Content-Disposition",
       `attachment; filename=invoice_${saleId}.pdf`
     );
     return res.send(pdfBuffer);
-
   } catch (err) {
     console.error("❌ خطأ أثناء إنشاء الفاتورة:", err);
     return res.status(500).json({ message: "خطأ في إنشاء الفاتورة" });

@@ -204,7 +204,7 @@ function buildInvoiceHTML({ sale, company, invoiceNumber, date }) {
       </table>
 
       <div class="total">
-        الإجمالي: ${totalAmount.toFixed(2)} ج.م
+        الإجمالي: ${totalAmount.toFixed(3)} ج.م
       </div>
 
       <div class="footer">

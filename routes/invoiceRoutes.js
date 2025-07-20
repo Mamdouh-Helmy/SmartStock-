@@ -1,242 +1,172 @@
 const puppeteer = require("puppeteer-core");
 const chromium = require("@sparticuz/chromium");
-const path = require("path");
-const fs = require("fs");
 const express = require("express");
 const router = express.Router();
 const Sale = require("../models/Sale");
 const User = require("../models/User");
 
+// إعدادات Chromium الإضافية
+chromium.setGraphicsMode = false;
+
 router.get("/generateInvoice/:saleId", async (req, res) => {
   const saleId = req.params.saleId;
+  let browser = null;
+  
   try {
-    // جلب بيانات العملية
-    const sale = await Sale.findById(saleId);
+    // 1. جلب بيانات البيع والمستخدم
+    const [sale, user] = await Promise.all([
+      Sale.findById(saleId),
+      User.findOne()
+    ]);
+
     if (!sale) {
-      return res.status(404).json({ message: "العملية غير موجودة" });
+      return res.status(404).json({ message: "البيع غير موجود" });
     }
-    
-    // جلب بيانات المستخدم واستخدام بيانات الشركة
-    const user = await User.findOne();
-    const companyName = user?.name || "اسم الشركة";
-    const companyAddress = user?.address || "عنوان الشركة";
-    const companyPhone = user?.phone || "هاتف الشركة";
-    const companyLogo = user?.logo || "https://img.freepik.com/free-psd/3d-illustration-human-avatar-profile_23-2150671142.jpg";
 
-    // استخدام الوقت والتاريخ الحالي مع تحديد المنطقة الزمنية المطلوبة (مثلاً منطقة القاهرة)
+    // 2. تحضير بيانات الفاتورة
+    const companyInfo = {
+      name: user?.name || "شركة غير محددة",
+      address: user?.address || "عنوان غير محدد",
+      phone: user?.phone || "هاتف غير محدد",
+      logo: user?.logo || "https://via.placeholder.com/150"
+    };
+
     const now = new Date();
-    const options = { timeZone: "Africa/Cairo", hour12: false };
-    const formattedDate = now.toLocaleDateString("ar-EG", options);
-    const formattedTime = now.toLocaleTimeString("ar-EG", options);
+    const invoiceNumber = `INV-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${saleId.slice(-6)}`;
+    const totalAmount = sale.products.reduce((sum, product) => sum + (product.price * product.quantity), 0);
 
-    // توليد رقم فاتورة بصيغة M****
-    const invoiceNumber = `M${Math.floor(1000 + Math.random() * 9000)}`;
-
-    // حساب الإجمالي العام
-    const totalAmount = sale.products.reduce(
-      (acc, product) => acc + product.quantity * product.price,
-      0
-    );
-
-    // التحقق مما إذا كان الاسم يحتوي على حروف عربية
-    const isArabic = /[\u0600-\u06FF]/.test(companyName);
-
-    // كود HTML للفاتورة مع التصميم المحسن
+    // 3. إنشاء محتوى HTML
     const htmlContent = `
-<html lang="ar">
-  <head>
-    <meta charset="UTF-8" />
-    <title>فاتورة المبيعات</title>
-    <!-- استيراد خطوط Google -->
-    <link href="https://fonts.googleapis.com/css2?family=Amiri&display=swap" rel="stylesheet" />
-    <link href="https://fonts.googleapis.com/css2?family=Satisfy&display=swap" rel="stylesheet" />
-    <style>
-      body {
-        background: #f2f2f2;
-        font-family: 'Amiri', serif;
-        margin: 0;
-        padding: 20px;
-        direction: rtl;
-        text-align: right;
-      }
-      .invoice-container {
-        max-width: 800px;
-        margin: 0 auto;
-        background: #fff;
-        border-radius: 8px;
-        overflow: hidden;
-        box-shadow: 0 0 10px rgba(0,0,0,0.1);
-      }
-      .header {
-        background: linear-gradient(135deg, #2c3e50, #34495e);
-        color: #ecf0f1;
-        padding: 20px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
-      .company-info p {
-        margin: 5px 0;
-        font-size: 18px;
-      }
-      .logo {
-        width: 120px;
-        height: 120px;
-        border-radius: 50%;
-        border: 2px solid #fff;
-        object-fit: cover;
-      }
-      .invoice-body {
-        padding: 20px;
-      }
-      .invoice-details p {
-        margin: 8px 0;
-        font-size: 16px;
-      }
-      .table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-top: 20px;
-      }
-      .table th,
-      .table td {
-        border: 1px solid #ddd;
-        padding: 12px;
-        font-size: 16px;
-        text-align: center;
-      }
-      .table th {
-        background: #ecf0f1;
-      }
-      .total {
-        text-align: right;
-        font-size: 20px;
-        margin-top: 20px;
-        font-weight: bold;
-      }
-      .signature {
-        margin-top: 20px;
-        text-align: center;
-      }
-      /* تصميم توقيع مع تأثير تدرج وظل للنص */
-      .signature .sig-text[lang="ar"],
-      .signature .sig-text[lang="en"] {
-        font-size: 48px;
-        background: linear-gradient(45deg, #2c3e50, #ff0099);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        transform: rotate(-3deg);
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-      }
-      .signature .sig-text[lang="en"] {
-        font-family: 'Satisfy', cursive;
-      }
-      .signature p {
-        margin-top: 10px;
-        font-size: 16px;
-        color: #333;
-      }
-    </style>
-  </head>
-  <body>
-    <div class="invoice-container">
-      <div class="header">
-        <div class="company-info">
-          <p><strong>اسم الشركة:</strong> ${companyName}</p>
-          <p><strong>العنوان:</strong> ${companyAddress}</p>
-          <p><strong>الهاتف:</strong> ${companyPhone}</p>
+    <!DOCTYPE html>
+    <html dir="rtl" lang="ar">
+    <head>
+      <meta charset="UTF-8">
+      <title>فاتورة ${invoiceNumber}</title>
+      <style>
+        body { font-family: 'Arial', sans-serif; margin: 0; padding: 20px; color: #333; }
+        .invoice-container { max-width: 800px; margin: 0 auto; background: #fff; border: 1px solid #ddd; }
+        .header { display: flex; justify-content: space-between; padding: 20px; background: #f5f5f5; }
+        .logo { width: 120px; height: auto; }
+        .invoice-details { padding: 20px; border-bottom: 1px solid #eee; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { padding: 12px; text-align: right; border-bottom: 1px solid #ddd; }
+        .total { font-weight: bold; text-align: left; padding: 20px; font-size: 18px; }
+        .footer { padding: 20px; text-align: center; font-size: 14px; color: #777; }
+      </style>
+    </head>
+    <body>
+      <div class="invoice-container">
+        <div class="header">
+          <div>
+            <h1>${companyInfo.name}</h1>
+            <p>${companyInfo.address}</p>
+            <p>${companyInfo.phone}</p>
+          </div>
+          <img src="${companyInfo.logo}" class="logo" alt="شعار الشركة">
         </div>
-        <div>
-          <img src="${companyLogo}" alt="Logo" class="logo" />
-        </div>
-      </div>
-      <div class="invoice-body">
+        
         <div class="invoice-details">
-          <p><strong>رقم الفاتورة:</strong> ${invoiceNumber}</p>
-          <p><strong>التاريخ:</strong> ${formattedDate}</p>
-          <p><strong>الوقت:</strong> ${formattedTime}</p>
-          <p><strong>اسم العميل:</strong> ${sale.customerName}</p>
+          <h2>فاتورة #${invoiceNumber}</h2>
+          <p>التاريخ: ${now.toLocaleDateString('ar-EG')}</p>
+          <p>العميل: ${sale.customerName || "عميل غير معروف"}</p>
         </div>
-        <table class="table">
+        
+        <table>
           <thead>
             <tr>
               <th>المنتج</th>
               <th>الكمية</th>
               <th>السعر</th>
-              <th>الإجمالي</th>
+              <th>المجموع</th>
             </tr>
           </thead>
           <tbody>
-            ${sale.products
-              .map(
-                (product) => `
+            ${sale.products.map(product => `
               <tr>
                 <td>${product.productName}</td>
                 <td>${product.quantity}</td>
-                <td>${product.price} جنيه</td>
-                <td>${product.quantity * product.price} جنيه</td>
+                <td>${product.price.toFixed(2)}</td>
+                <td>${(product.price * product.quantity).toFixed(2)}</td>
               </tr>
-            `
-              )
-              .join("")}
+            `).join('')}
           </tbody>
         </table>
+        
         <div class="total">
-          <p>المجموع: ${totalAmount} جنيه</p>
+          المبلغ الإجمالي: ${totalAmount.toFixed(2)} جنيه
         </div>
-        <div class="signature">
-          <p><strong>التوقيع:</strong></p>
-          <!-- تحديد لغة التوقيع بناءً على محتوى الاسم -->
-          <span class="sig-text" lang="${
-            isArabic ? "ar" : "en"
-          }">${companyName}</span>
-          <p>شكراً لتعاملكم معانا</p>
+        
+        <div class="footer">
+          شكراً لتعاملكم معنا | للاستفسار ${companyInfo.phone}
         </div>
       </div>
-    </div>
-  </body>
-</html>
-`;
+    </body>
+    </html>
+    `;
 
-     console.log("🚀 بدء تشغيل Puppeteer...");
-    const browser = await puppeteer.launch({
-      headless: chromium.headless,
+    // 4. إنشاء PDF باستخدام Puppeteer
+    console.log("🚀 جاري تهيئة المتصفح...");
+    browser = await puppeteer.launch({
       executablePath: await chromium.executablePath(),
-      args: chromium.args,
+      args: [
+        ...chromium.args,
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage'
+      ],
+      headless: "new",
+      timeout: 60000
     });
+
     const page = await browser.newPage();
-    await page.setContent(htmlContent, { waitUntil: "load" });
-    console.log("📄 إنشاء ملف PDF...");
-    const pdfBuffer = await page.pdf({
-      format: "A4",
-      printBackground: true,
-      margin: { top: "0px", right: "0px", bottom: "0px", left: "0px" },
+    await page.setContent(htmlContent, {
+      waitUntil: ['networkidle0', 'load'],
+      timeout: 30000
     });
-    await browser.close();
-    console.log("✅ تم إنشاء PDF بنجاح!");
 
-    // التعديل الرئيسي هنا: استخدام مجلد /tmp بدلاً من المسار الحالي
-    const invoicesDir = path.join('/tmp', 'invoices');
-    if (!fs.existsSync(invoicesDir)) {
-      fs.mkdirSync(invoicesDir, { recursive: true });
+    console.log("📄 جاري إنشاء PDF...");
+    const pdfBuffer = await page.pdf({
+      format: 'A4',
+      printBackground: true,
+      margin: {
+        top: '20mm',
+        right: '20mm',
+        bottom: '20mm',
+        left: '20mm'
+      },
+      timeout: 30000
+    });
+
+    if (!pdfBuffer || pdfBuffer.length < 1024) {
+      throw new Error("فشل إنشاء ملف PDF - الملف صغير جداً أو فارغ");
     }
-    const filePath = path.join(invoicesDir, `invoice_${saleId}.pdf`);
-    fs.writeFileSync(filePath, pdfBuffer);
 
-    // إرسال الملف مباشرة دون الحاجة إلى حفظه (خيار أفضل)
-    res.setHeader("Content-Disposition", `attachment; filename=invoice_${saleId}.pdf`);
-    res.setHeader("Content-Type", "application/pdf");
-    res.send(pdfBuffer);
+    console.log(`✅ تم إنشاء PDF بنجاح! (حجم الملف: ${(pdfBuffer.length / 1024).toFixed(2)} KB)`);
 
-    // حذف الملف المؤقت بعد الإرسال (اختياري)
-    try {
-      fs.unlinkSync(filePath);
-    } catch (cleanupErr) {
-      console.error("⚠️ خطأ أثناء تنظيف الملف المؤقت:", cleanupErr);
+    // 5. إرسال الاستجابة
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="invoice_${invoiceNumber}.pdf"`,
+      'Content-Length': pdfBuffer.length
+    });
+    
+    return res.send(pdfBuffer);
+
+  } catch (error) {
+    console.error("❌ خطأ في إنشاء الفاتورة:", error);
+    return res.status(500).json({
+      success: false,
+      message: "حدث خطأ أثناء إنشاء الفاتورة",
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  } finally {
+    if (browser) {
+      try {
+        await browser.close();
+      } catch (err) {
+        console.error("⚠️ خطأ أثناء إغلاق المتصفح:", err);
+      }
     }
-  } catch (err) {
-    console.error("❌ خطأ أثناء إنشاء الفاتورة:", err);
-    res.status(500).json({ message: "خطأ في إنشاء الفاتورة" });
   }
 });
 

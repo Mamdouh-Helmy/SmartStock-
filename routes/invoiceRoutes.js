@@ -265,6 +265,7 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
 
   } catch (err) {
     console.error("❌ خطأ في إنشاء الفاتورة:", err);
+     console.error("❌ خطأ في إنشاء الفاتورة:", err);
     return res.status(500).json({ 
       message: "حدث خطأ أثناء إنشاء الفاتورة",
       error: err.message 

@@ -5,9 +5,17 @@ const ReactPDF = require("@react-pdf/renderer");
 const Sale = require("../models/Sale");
 const User = require("../models/User");
 
-const { Document, Page, View, Text, StyleSheet, Font, Image } = ReactPDF;
+const {
+  Document,
+  Page,
+  View,
+  Text,
+  StyleSheet,
+  Font,
+  Image,
+} = ReactPDF;
 
-// 1) تسجّل خطوط Amiri و Satisfy
+// سجّل الخطوط
 Font.register({
   family: "Amiri",
   src: "https://fonts.gstatic.com/ea/amiri/v15/amiri-regular.ttf",
@@ -17,12 +25,9 @@ Font.register({
   src: "https://fonts.gstatic.com/s/satisfy/v14/rP2Hp2yn6lkGbp0gSoeA3L0E.ttf",
 });
 
-// 2) أنشئ الـ Component الخاص بالفاتورة
+// مكوّن الفاتورة
 const InvoiceDocument = ({ sale, user }) => {
-  const totalAmount = sale.products.reduce(
-    (sum, p) => sum + p.quantity * p.price,
-    0
-  );
+  const totalAmount = sale.products.reduce((sum, p) => sum + p.quantity * p.price, 0);
   const now = new Date().toLocaleString("ar-EG", {
     timeZone: "Africa/Cairo",
     hour12: false,
@@ -46,17 +51,9 @@ const InvoiceDocument = ({ sale, user }) => {
     tableRow: { flexDirection: "row" },
     tableCol: { flex: 1, borderWidth: 1, borderColor: "#ddd", padding: 4 },
     tableCell: { textAlign: "center" },
-    total: {
-      textAlign: "right",
-      marginTop: 10,
-      fontSize: 14,
-      fontWeight: "bold",
-    },
+    total: { textAlign: "right", marginTop: 10, fontSize: 14, fontWeight: "bold" },
     signature: { alignItems: "center", marginTop: 20 },
-    sigText: {
-      fontFamily: "Satisfy",
-      fontSize: 24,
-    },
+    sigText: { fontFamily: "Satisfy", fontSize: 24 },
   });
 
   return (
@@ -81,29 +78,19 @@ const InvoiceDocument = ({ sale, user }) => {
 
         {/* Table */}
         <View style={styles.table}>
-          {/* Header Row */}
           <View style={styles.tableRow}>
-            {["المنتج", "الكمية", "السعر", "الإجمالي"].map((header) => (
-              <View key={header} style={styles.tableCol}>
-                <Text style={styles.tableCell}>{header}</Text>
+            {["المنتج", "الكمية", "السعر", "الإجمالي"].map((hdr) => (
+              <View key={hdr} style={styles.tableCol}>
+                <Text style={styles.tableCell}>{hdr}</Text>
               </View>
             ))}
           </View>
-          {/* Data Rows */}
-          {sale.products.map((p, idx) => (
-            <View style={styles.tableRow} key={idx}>
-              <View style={styles.tableCol}>
-                <Text style={styles.tableCell}>{p.productName}</Text>
-              </View>
-              <View style={styles.tableCol}>
-                <Text style={styles.tableCell}>{p.quantity}</Text>
-              </View>
-              <View style={styles.tableCol}>
-                <Text style={styles.tableCell}>{p.price}</Text>
-              </View>
-              <View style={styles.tableCol}>
-                <Text style={styles.tableCell}>{p.quantity * p.price}</Text>
-              </View>
+          {sale.products.map((p, i) => (
+            <View style={styles.tableRow} key={i}>
+              <View style={styles.tableCol}><Text style={styles.tableCell}>{p.productName}</Text></View>
+              <View style={styles.tableCol}><Text style={styles.tableCell}>{p.quantity}</Text></View>
+              <View style={styles.tableCol}><Text style={styles.tableCell}>{p.price}</Text></View>
+              <View style={styles.tableCol}><Text style={styles.tableCell}>{p.quantity * p.price}</Text></View>
             </View>
           ))}
         </View>
@@ -112,9 +99,7 @@ const InvoiceDocument = ({ sale, user }) => {
         <Text style={styles.total}>المجموع: {totalAmount} جنيه</Text>
         <View style={styles.signature}>
           <Text>—</Text>
-          <Text style={styles.sigText} lang={isArabic ? "ar" : "en"}>
-            {user.name}
-          </Text>
+          <Text style={styles.sigText} lang={isArabic ? "ar" : "en"}>{user.name}</Text>
           <Text>شكراً لتعاملكم معنا</Text>
         </View>
       </Page>
@@ -126,28 +111,26 @@ const router = express.Router();
 
 router.get("/generateInvoice/:saleId", async (req, res) => {
   try {
-    // جلب البيانات
+    // جلب المبيعة والشركة
     const sale = await Sale.findById(req.params.saleId);
     if (!sale) return res.status(404).json({ message: "العملية غير موجودة" });
 
     const user = await User.findOne();
-    if (!user)
-      return res.status(500).json({ message: "بيانات الشركة غير متوفرة" });
+    if (!user) return res.status(500).json({ message: "بيانات الشركة غير متوفرة" });
 
-    // استخدم renderToStream لإرسال PDF مباشرة
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename=invoice_${sale._id}.pdf`
-    );
-
-    const stream = await ReactPDF.renderToStream(
+    // أنشئ البوفر ثم أرسله
+    const pdfBuffer = await ReactPDF.renderToBuffer(
       <InvoiceDocument sale={sale} user={user} />
     );
-    stream.pipe(res);
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename=invoice_${sale._id}.pdf`);
+    res.setHeader("Content-Length", pdfBuffer.length);
+    return res.status(200).send(pdfBuffer);
+
   } catch (err) {
     console.error("❌ خطأ أثناء إنشاء الفاتورة:", err);
-    res.status(500).json({ message: "خطأ في إنشاء الفاتورة" });
+    return res.status(500).json({ message: "خطأ في إنشاء الفاتورة" });
   }
 });
 

@@ -5,51 +5,53 @@ const Sale = require("../models/Sale");
 const User = require("../models/User");
 const path = require("path");
 const fs = require("fs");
+const fetch = require("node-fetch");
 
 const router = express.Router();
 
-// دالة لترميز اسم الملف للرؤوس
-const encodeFilename = (filename) => {
-  return encodeURIComponent(filename)
-    .replace(/['()]/g, escape)
-    .replace(/\*/g, "%2A");
-};
-
-// تسجيل الخط العربي باستخدام ملف محلي
-const registerArabicFont = async () => {
+// دالة مساعدة لتحميل الخطوط
+async function registerFonts() {
   const ReactPDF = await import("@react-pdf/renderer");
   const { Font } = ReactPDF;
 
   try {
-    // الطريقة الأولى: استخدام خط افتراضي يدعم العربية (مثل Arial)
+    // الخط الأساسي: Amiri من جوجل فونتس
+    const amiriFontResponse = await fetch(
+      "https://fonts.googleapis.com/css2?family=Amiri&display=swap"
+    );
+    const amiriFontUrl = amiriFontResponse.url.replace("css2", "css2@latest");
+
     Font.register({
       family: "Arabic",
       fonts: [
         {
-          src: "https://fonts.gstatic.com/s/amiri/v27/J7aRnpd8CGxBHpUrtLMA7w.woff2",
+          src: amiriFontUrl,
           fontWeight: 400,
         },
         {
-          src: "https://fonts.gstatic.com/s/amiri/v27/J7aRnpd8CGxBHpUgtbMA7w.woff2",
+          src: amiriFontUrl,
           fontWeight: 700,
         },
       ],
     });
 
-    // الطريقة الثانية: استخدام خط من ملف محلي (يفضل)
-    const fontPath = path.join(__dirname, "../public/fonts/Amiri-Regular.ttf");
-    if (fs.existsSync(fontPath)) {
-      Font.register({
-        family: "ArabicLocal",
-        src: fontPath,
-      });
-    }
+    console.log("تم تسجيل الخط العربي بنجاح");
   } catch (err) {
-    console.warn("تحذير: تعذر تحميل الخط العربي -", err.message);
+    console.error("فشل في تسجيل الخط العربي:", err);
+    
+    // استخدام خط بديل إذا فشل التحميل
+    Font.register({
+      family: "Arabic",
+      fonts: [
+        {
+          src: "https://fonts.cdnfonts.com/css/times-new-roman",
+        },
+      ],
+    });
   }
 
   Font.registerHyphenationCallback((word) => [word]);
-};
+}
 
 router.get("/generateInvoice/:saleId", async (req, res) => {
   try {
@@ -69,8 +71,8 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
     const ReactPDF = await import("@react-pdf/renderer");
     const { Document, Page, View, Text, StyleSheet, Image, pdf, Font } = ReactPDF;
 
-    // 4. تسجيل الخط العربي
-    await registerArabicFont();
+    // 4. تسجيل الخطوط
+    await registerFonts();
 
     // 5. تعريف مكون الفاتورة
     function InvoiceDocument({ sale, user }) {
@@ -89,7 +91,7 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
       const styles = StyleSheet.create({
         page: {
           padding: 40,
-          fontFamily: "ArabicLocal" || "Arabic", // استخدام الخط المحلي أولاً
+          fontFamily: "Arabic", // استخدام الخط المسجل
           direction: "rtl",
           textAlign: "right",
           lineHeight: 1.5
@@ -253,13 +255,10 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
     const pdfBuffer = Buffer.concat(chunks);
 
     // إعداد رؤوس الاستجابة
-    const filename = `invoice_${sale._id}.pdf`;
-    const encodedFilename = encodeFilename(filename);
-
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader(
-      "Content-Disposition", 
-      `attachment; filename="${encodedFilename}"; filename*=UTF-8''${encodedFilename}`
+      "Content-Disposition",
+      `attachment; filename="invoice_${sale._id}.pdf"`
     );
     res.setHeader("Content-Length", pdfBuffer.length);
     res.send(pdfBuffer);

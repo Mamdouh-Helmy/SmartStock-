@@ -14,7 +14,7 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
       return res.status(404).json({ message: "العملية غير موجودة" });
     }
 
-    // 2. جلب بيانات الشركة (المستخدم الأول)
+    // 2. جلب بيانات الشركة
     const user = await User.findOne();
     if (!user) {
       return res.status(500).json({ message: "بيانات الشركة غير متوفرة" });
@@ -32,7 +32,7 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
       pdf,
     } = ReactPDF;
 
-    // 4. تعريف مكوّن الوثيقة دون خطوط مخصّصة
+    // 4. مكون الوثيقة
     function InvoiceDocument({ sale, user }) {
       const totalAmount = sale.products.reduce((sum, p) => sum + p.quantity * p.price, 0);
       const now = `${new Date().toLocaleDateString("ar-EG", { timeZone: "Africa/Cairo", hour12: false })} ${new Date().toLocaleTimeString("ar-EG", { timeZone: "Africa/Cairo", hour12: false })}`;
@@ -66,7 +66,6 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
         React.createElement(
           Page,
           { size: "A4", style: styles.page },
-          // Header
           React.createElement(
             View,
             { style: styles.header },
@@ -79,7 +78,6 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
             ),
             user.logo && React.createElement(Image, { style: styles.logo, src: user.logo })
           ),
-          // Details
           React.createElement(
             View,
             { style: styles.section },
@@ -87,11 +85,9 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
             React.createElement(Text, null, `التاريخ والوقت: ${now}`),
             React.createElement(Text, null, `اسم العميل: ${sale.customerName}`)
           ),
-          // Table
           React.createElement(
             View,
             { style: styles.table },
-            // Header row
             React.createElement(
               View,
               { style: styles.tableRow },
@@ -103,7 +99,6 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
                 )
               )
             ),
-            // Data rows
             sale.products.map((p, i) =>
               React.createElement(
                 View,
@@ -131,7 +126,6 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
               )
             )
           ),
-          // Total & Signature
           React.createElement(Text, { style: styles.total }, `المجموع: ${totalAmount} جنيه`),
           React.createElement(
             View,
@@ -144,12 +138,17 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
       );
     }
 
-    // 5. توليد PDF إلى Buffer
+    // 5. توليد PDF في الذاكرة
     const element = React.createElement(InvoiceDocument, { sale, user });
     const pdfDoc = pdf(element);
     const pdfBuffer = await pdfDoc.toBuffer();
 
-    // 6. إرسال الـ PDF
+    // 6. تأكيد وجود Buffer صالح
+    if (!pdfBuffer || !Buffer.isBuffer(pdfBuffer)) {
+      return res.status(500).json({ message: "فشل في توليد الفاتورة." });
+    }
+
+    // 7. إرسال الملف كـ PDF
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `attachment; filename=invoice_${sale._id}.pdf`);
     res.setHeader("Content-Length", pdfBuffer.length);

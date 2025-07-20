@@ -1,21 +1,26 @@
 // routes/invoiceRoutes.js
 const express = require("express");
+const path = require("path");
 const React = require("react");
 const Sale = require("../models/Sale");
 const User = require("../models/User");
-
 const router = express.Router();
 
 router.get("/generateInvoice/:saleId", async (req, res) => {
   try {
-    // 1. جلب المبيعة والشركة
+    // 1. جلب عملية البيع
     const sale = await Sale.findById(req.params.saleId);
-    if (!sale) return res.status(404).json({ message: "العملية غير موجودة" });
+    if (!sale) {
+      return res.status(404).json({ message: "العملية غير موجودة" });
+    }
 
+    // 2. جلب بيانات الشركة (المستخدم الأول)
     const user = await User.findOne();
-    if (!user) return res.status(500).json({ message: "بيانات الشركة غير متوفرة" });
+    if (!user) {
+      return res.status(500).json({ message: "بيانات الشركة غير متوفرة" });
+    }
 
-    // 2. هنحمّل React-PDF ديناميكياً
+    // 3. تحميل مكتبة @react-pdf/renderer ديناميكياً
     const ReactPDF = await import("@react-pdf/renderer");
     const {
       Document,
@@ -25,32 +30,34 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
       StyleSheet,
       Font,
       Image,
-      pdf,           // نستعمله لتوليد buffer
+      pdf,
     } = ReactPDF;
 
-    // 3. سجّل الخطوط
+    // 4. تسجيل الخطوط محلياً من مجلد /fonts
     Font.register({
       family: "Amiri",
-      src: "https://fonts.gstatic.com/ea/amiri/v15/amiri-regular.ttf",
+      src: path.join(__dirname, "../fonts/Amiri-Regular.ttf"),
     });
     Font.register({
       family: "Satisfy",
-      src: "https://fonts.gstatic.com/s/satisfy/v14/rP2Hp2yn6lkGbp0gSoeA3L0E.ttf",
+      src: path.join(__dirname, "../fonts/Satisfy-Regular.ttf"),
     });
 
-    // 4. مكوّن الـInvoice
+    // 5. مكوّن الوثيقة
     const InvoiceDocument = ({ sale, user }) => {
       const totalAmount = sale.products.reduce(
         (sum, p) => sum + p.quantity * p.price,
         0
       );
-      const now = new Date().toLocaleDateString("ar-EG", {
+
+      const now = `${new Date().toLocaleDateString("ar-EG", {
         timeZone: "Africa/Cairo",
         hour12: false,
-      }) + " " + new Date().toLocaleTimeString("ar-EG", {
+      })} ${new Date().toLocaleTimeString("ar-EG", {
         timeZone: "Africa/Cairo",
         hour12: false,
-      });
+      })}`;
+
       const invoiceNumber = `M${Math.floor(1000 + Math.random() * 9000)}`;
       const isArabic = /[\u0600-\u06FF]/.test(user.name);
 
@@ -70,12 +77,7 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
         tableRow: { flexDirection: "row" },
         tableCol: { flex: 1, borderWidth: 1, borderColor: "#ddd", padding: 4 },
         tableCell: { textAlign: "center" },
-        total: {
-          textAlign: "right",
-          marginTop: 10,
-          fontSize: 14,
-          fontWeight: "bold",
-        },
+        total: { textAlign: "right", marginTop: 10, fontSize: 14, fontWeight: "bold" },
         signature: { alignItems: "center", marginTop: 20 },
         sigText: { fontFamily: "Satisfy", fontSize: 24 },
       });
@@ -86,7 +88,7 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
         React.createElement(
           Page,
           { size: "A4", style: styles.page },
-          // الهيدر
+          // Header
           React.createElement(
             View,
             { style: styles.header },
@@ -99,7 +101,8 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
             ),
             user.logo && React.createElement(Image, { style: styles.logo, src: user.logo })
           ),
-          // التفاصيل
+
+          // Details
           React.createElement(
             View,
             { style: styles.section },
@@ -107,11 +110,12 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
             React.createElement(Text, null, `التاريخ والوقت: ${now}`),
             React.createElement(Text, null, `اسم العميل: ${sale.customerName}`)
           ),
-          // الجدول
+
+          // Table
           React.createElement(
             View,
             { style: styles.table },
-            // رؤوس الأعمدة
+            // Header row
             React.createElement(
               View,
               { style: styles.tableRow },
@@ -123,35 +127,32 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
                 )
               )
             ),
-            // بيانات المنتجات
+            // Data rows
             sale.products.map((p, i) =>
               React.createElement(
                 View,
-                { style: styles.tableRow, key: i },
+                { key: i, style: styles.tableRow },
                 React.createElement(
-                  View,
-                  { style: styles.tableCol },
+                  View, { style: styles.tableCol },
                   React.createElement(Text, { style: styles.tableCell }, p.productName)
                 ),
                 React.createElement(
-                  View,
-                  { style: styles.tableCol },
+                  View, { style: styles.tableCol },
                   React.createElement(Text, { style: styles.tableCell }, p.quantity.toString())
                 ),
                 React.createElement(
-                  View,
-                  { style: styles.tableCol },
+                  View, { style: styles.tableCol },
                   React.createElement(Text, { style: styles.tableCell }, p.price.toString())
                 ),
                 React.createElement(
-                  View,
-                  { style: styles.tableCol },
+                  View, { style: styles.tableCol },
                   React.createElement(Text, { style: styles.tableCell }, (p.quantity * p.price).toString())
                 )
               )
             )
           ),
-          // المجموع والتوقيع
+
+          // Total & Signature
           React.createElement(Text, { style: styles.total }, `المجموع: ${totalAmount} جنيه`),
           React.createElement(
             View,
@@ -168,12 +169,12 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
       );
     };
 
-    // 5. توليد الـ PDF إلى buffer
+    // 6. توليد PDF إلى buffer
     const element = React.createElement(InvoiceDocument, { sale, user });
     const pdfDoc = pdf(element);
     const pdfBuffer = await pdfDoc.toBuffer();
 
-    // 6. إرسال النتيجة
+    // 7. إرسال الـPDF
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `attachment; filename=invoice_${sale._id}.pdf`);
     res.setHeader("Content-Length", pdfBuffer.length);

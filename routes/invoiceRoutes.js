@@ -23,25 +23,25 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
     const companyLogo =
       user?.logo ||
       "https://img.freepik.com/free-psd/3d-illustration-human-avatar-profile_23-2150671142.jpg";
-    
+
     // استخدام الوقت والتاريخ الحالي مع تحديد المنطقة الزمنية المطلوبة (مثلاً منطقة القاهرة)
     const now = new Date();
-    const options = { timeZone: 'Africa/Cairo', hour12: false };
-    const formattedDate = now.toLocaleDateString('ar-EG', options);
-    const formattedTime = now.toLocaleTimeString('ar-EG', options);
-    
+    const options = { timeZone: "Africa/Cairo", hour12: false };
+    const formattedDate = now.toLocaleDateString("ar-EG", options);
+    const formattedTime = now.toLocaleTimeString("ar-EG", options);
+
     // توليد رقم فاتورة بصيغة M****
     const invoiceNumber = `M${Math.floor(1000 + Math.random() * 9000)}`;
-    
+
     // حساب الإجمالي العام
     const totalAmount = sale.products.reduce(
       (acc, product) => acc + product.quantity * product.price,
       0
     );
-    
+
     // التحقق مما إذا كان الاسم يحتوي على حروف عربية
     const isArabic = /[\u0600-\u06FF]/.test(companyName);
-    
+
     // كود HTML للفاتورة مع التصميم المحسن
     const htmlContent = `
 <html lang="ar">
@@ -188,7 +188,9 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
         <div class="signature">
           <p><strong>التوقيع:</strong></p>
           <!-- تحديد لغة التوقيع بناءً على محتوى الاسم -->
-          <span class="sig-text" lang="${isArabic ? "ar" : "en"}">${companyName}</span>
+          <span class="sig-text" lang="${
+            isArabic ? "ar" : "en"
+          }">${companyName}</span>
           <p>شكراً لتعاملكم معانا</p>
         </div>
       </div>
@@ -219,7 +221,10 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
     }
     const filePath = path.join(invoicesDir, `invoice_${saleId}.pdf`);
     fs.writeFileSync(filePath, pdfBuffer);
-    res.setHeader("Content-Disposition", `attachment; filename=invoice_${saleId}.pdf`);
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=invoice_${saleId}.pdf`
+    );
     res.setHeader("Content-Type", "application/pdf");
     res.download(filePath);
   } catch (err) {
@@ -229,9 +234,6 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
 });
 
 module.exports = router;
-
-
-
 
 // const PDFDocument = require("pdfkit");
 // const fs = require("fs").promises;
@@ -402,5 +404,3 @@ module.exports = router;
 // });
 
 // module.exports = router;
-
-

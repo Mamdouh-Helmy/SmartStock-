@@ -1,173 +1,287 @@
-const puppeteer = require("puppeteer-core");
-const chromium = require("@sparticuz/chromium");
-const express = require("express");
+const puppeteer = require('puppeteer-core');
+const chromium = require('@sparticuz/chromium');
+const express = require('express');
 const router = express.Router();
-const Sale = require("../models/Sale");
-const User = require("../models/User");
+const Sale = require('../models/Sale');
+const User = require('../models/User');
 
-// إعدادات Chromium الإضافية
-chromium.setGraphicsMode = false;
+// إعدادات Chromium الموصى بها لبيئات Serverless
+chromium.setConfig({
+  executablePath: process.env.CHROMIUM_PATH || await chromium.executablePath(),
+  headless: true,
+  ignoreDefaultArgs: ['--disable-extensions'],
+  args: [
+    '--no-sandbox',
+    '--disable-setuid-sandbox',
+    '--disable-dev-shm-usage',
+    '--disable-accelerated-2d-canvas',
+    '--no-first-run',
+    '--no-zygote',
+    '--single-process',
+    '--disable-gpu'
+  ]
+});
 
-router.get("/generateInvoice/:saleId", async (req, res) => {
-  const saleId = req.params.saleId;
+router.get('/generateInvoice/:saleId', async (req, res) => {
+  const { saleId } = req.params;
   let browser = null;
-  
+
   try {
-    // 1. جلب بيانات البيع والمستخدم
+    // 1. التحقق من صحة المعرّف
+    if (!saleId || !/^[0-9a-fA-F]{24}$/.test(saleId)) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'معرّف الفاتورة غير صالح'
+      });
+    }
+
+    // 2. جلب البيانات من قاعدة البيانات
     const [sale, user] = await Promise.all([
-      Sale.findById(saleId),
-      User.findOne()
+      Sale.findById(saleId).lean(),
+      User.findOne().lean().select('name address phone logo')
     ]);
 
     if (!sale) {
-      return res.status(404).json({ message: "البيع غير موجود" });
+      return res.status(404).json({ 
+        success: false,
+        message: 'لم يتم العثور على الفاتورة'
+      });
     }
 
-    // 2. تحضير بيانات الفاتورة
-    const companyInfo = {
-      name: user?.name || "شركة غير محددة",
-      address: user?.address || "عنوان غير محدد",
-      phone: user?.phone || "هاتف غير محدد",
-      logo: user?.logo || "https://via.placeholder.com/150"
-    };
-
-    const now = new Date();
-    const invoiceNumber = `INV-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${saleId.slice(-6)}`;
-    const totalAmount = sale.products.reduce((sum, product) => sum + (product.price * product.quantity), 0);
-
-    // 3. إنشاء محتوى HTML
-    const htmlContent = `
-    <!DOCTYPE html>
-    <html dir="rtl" lang="ar">
-    <head>
-      <meta charset="UTF-8">
-      <title>فاتورة ${invoiceNumber}</title>
-      <style>
-        body { font-family: 'Arial', sans-serif; margin: 0; padding: 20px; color: #333; }
-        .invoice-container { max-width: 800px; margin: 0 auto; background: #fff; border: 1px solid #ddd; }
-        .header { display: flex; justify-content: space-between; padding: 20px; background: #f5f5f5; }
-        .logo { width: 120px; height: auto; }
-        .invoice-details { padding: 20px; border-bottom: 1px solid #eee; }
-        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-        th, td { padding: 12px; text-align: right; border-bottom: 1px solid #ddd; }
-        .total { font-weight: bold; text-align: left; padding: 20px; font-size: 18px; }
-        .footer { padding: 20px; text-align: center; font-size: 14px; color: #777; }
-      </style>
-    </head>
-    <body>
-      <div class="invoice-container">
-        <div class="header">
-          <div>
-            <h1>${companyInfo.name}</h1>
-            <p>${companyInfo.address}</p>
-            <p>${companyInfo.phone}</p>
-          </div>
-          <img src="${companyInfo.logo}" class="logo" alt="شعار الشركة">
-        </div>
-        
-        <div class="invoice-details">
-          <h2>فاتورة #${invoiceNumber}</h2>
-          <p>التاريخ: ${now.toLocaleDateString('ar-EG')}</p>
-          <p>العميل: ${sale.customerName || "عميل غير معروف"}</p>
-        </div>
-        
-        <table>
-          <thead>
-            <tr>
-              <th>المنتج</th>
-              <th>الكمية</th>
-              <th>السعر</th>
-              <th>المجموع</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${sale.products.map(product => `
-              <tr>
-                <td>${product.productName}</td>
-                <td>${product.quantity}</td>
-                <td>${product.price.toFixed(2)}</td>
-                <td>${(product.price * product.quantity).toFixed(2)}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-        
-        <div class="total">
-          المبلغ الإجمالي: ${totalAmount.toFixed(2)} جنيه
-        </div>
-        
-        <div class="footer">
-          شكراً لتعاملكم معنا | للاستفسار ${companyInfo.phone}
-        </div>
-      </div>
-    </body>
-    </html>
-    `;
-
-    // 4. إنشاء PDF باستخدام Puppeteer
-    console.log("🚀 جاري تهيئة المتصفح...");
-    browser = await puppeteer.launch({
-      executablePath: await chromium.executablePath(),
-      args: [
-        ...chromium.args,
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage'
-      ],
-      headless: "new",
-      timeout: 60000
-    });
-
-    const page = await browser.newPage();
-    await page.setContent(htmlContent, {
-      waitUntil: ['networkidle0', 'load'],
-      timeout: 30000
-    });
-
-    console.log("📄 جاري إنشاء PDF...");
-    const pdfBuffer = await page.pdf({
-      format: 'A4',
-      printBackground: true,
-      margin: {
-        top: '20mm',
-        right: '20mm',
-        bottom: '20mm',
-        left: '20mm'
+    // 3. إنشاء محتوى HTML للفاتورة
+    const htmlContent = buildInvoiceHTML({
+      sale,
+      company: {
+        name: user?.name || 'شركة تجارية',
+        address: user?.address || 'العنوان غير محدد',
+        phone: user?.phone || '01xxxxxxxx',
+        logo: user?.logo || 'https://via.placeholder.com/150'
       },
-      timeout: 30000
+      invoiceNumber: `INV-${Date.now().toString().slice(-6)}`,
+      date: new Date().toLocaleDateString('ar-EG', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      })
     });
 
-    if (!pdfBuffer || pdfBuffer.length < 1024) {
-      throw new Error("فشل إنشاء ملف PDF - الملف صغير جداً أو فارغ");
+    // 4. توليد ملف PDF
+    const pdfBuffer = await generatePDF(htmlContent);
+
+    // 5. التحقق من صحة الملف الناتج
+    if (!isValidPDF(pdfBuffer)) {
+      throw new Error('فشل إنشاء ملف PDF: الملف غير صالح');
     }
 
-    console.log(`✅ تم إنشاء PDF بنجاح! (حجم الملف: ${(pdfBuffer.length / 1024).toFixed(2)} KB)`);
-
-    // 5. إرسال الاستجابة
-    res.set({
-      'Content-Type': 'application/pdf',
-      'Content-Disposition': `attachment; filename="invoice_${invoiceNumber}.pdf"`,
-      'Content-Length': pdfBuffer.length
-    });
-    
-    return res.send(pdfBuffer);
+    // 6. إرسال الاستجابة النهائية
+    sendPDFToClient(res, pdfBuffer, `invoice_${saleId}.pdf`);
 
   } catch (error) {
-    console.error("❌ خطأ في إنشاء الفاتورة:", error);
-    return res.status(500).json({
-      success: false,
-      message: "حدث خطأ أثناء إنشاء الفاتورة",
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
+    console.error('❌ فشل إنشاء الفاتورة:', error);
+    handleErrorResponse(res, error);
   } finally {
     if (browser) {
-      try {
-        await browser.close();
-      } catch (err) {
-        console.error("⚠️ خطأ أثناء إغلاق المتصفح:", err);
-      }
+      await browser.close().catch(err => {
+        console.error('⚠️ خطأ في إغلاق المتصفح:', err);
+      });
     }
   }
 });
+
+// ============= الدوال المساعدة ============= //
+
+/**
+ * إنشاء محتوى HTML للفاتورة
+ */
+function buildInvoiceHTML({ sale, company, invoiceNumber, date }) {
+  const totalAmount = sale.products.reduce((sum, p) => sum + (p.price * p.quantity), 0);
+  
+  return `
+  <!DOCTYPE html>
+  <html dir="rtl" lang="ar">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>فاتورة ${invoiceNumber}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body { 
+        font-family: 'Tajawal', sans-serif; 
+        background: #f5f5f5;
+        color: #333;
+        line-height: 1.6;
+      }
+      .invoice-container {
+        max-width: 800px;
+        margin: 20px auto;
+        padding: 20px;
+        background: #fff;
+        box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      }
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 1px solid #eee;
+      }
+      .company-logo {
+        width: 120px;
+        height: auto;
+      }
+      .invoice-info {
+        margin: 20px 0;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 20px 0;
+      }
+      th, td {
+        padding: 12px 15px;
+        text-align: right;
+        border-bottom: 1px solid #ddd;
+      }
+      th {
+        background-color: #f9f9f9;
+        font-weight: 700;
+      }
+      .total {
+        font-size: 18px;
+        font-weight: bold;
+        margin-top: 20px;
+        text-align: left;
+      }
+      .footer {
+        margin-top: 30px;
+        padding-top: 20px;
+        border-top: 1px solid #eee;
+        text-align: center;
+        font-size: 14px;
+        color: #777;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="invoice-container">
+      <div class="header">
+        <div>
+          <h1>${company.name}</h1>
+          <p>${company.address}</p>
+          <p>${company.phone}</p>
+        </div>
+        <img src="${company.logo}" alt="شعار الشركة" class="company-logo">
+      </div>
+
+      <div class="invoice-info">
+        <h2>فاتورة ضريبية</h2>
+        <p><strong>رقم الفاتورة:</strong> ${invoiceNumber}</p>
+        <p><strong>التاريخ:</strong> ${date}</p>
+        <p><strong>العميل:</strong> ${sale.customerName || 'غير محدد'}</p>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>المنتج</th>
+            <th>الكمية</th>
+            <th>السعر</th>
+            <th>المجموع</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${sale.products.map(product => `
+            <tr>
+              <td>${product.productName}</td>
+              <td>${product.quantity}</td>
+              <td>${product.price.toFixed(2)} ج.م</td>
+              <td>${(product.price * product.quantity).toFixed(2)} ج.م</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+
+      <div class="total">
+        الإجمالي: ${totalAmount.toFixed(2)} ج.م
+      </div>
+
+      <div class="footer">
+        شكراً لتعاملكم معنا | للاستفسار ${company.phone}
+      </div>
+    </div>
+  </body>
+  </html>
+  `;
+}
+
+/**
+ * توليد ملف PDF من محتوى HTML
+ */
+async function generatePDF(htmlContent) {
+  const browser = await puppeteer.launch({
+    executablePath: await chromium.executablePath(),
+    args: chromium.args,
+    headless: 'new',
+    timeout: 120000
+  });
+
+  const page = await browser.newPage();
+  
+  try {
+    await page.setContent(htmlContent, {
+      waitUntil: ['networkidle0', 'load'],
+      timeout: 60000
+    });
+
+    return await page.pdf({
+      format: 'A4',
+      printBackground: true,
+      margin: { top: '20mm', right: '20mm', bottom: '20mm', left: '20mm' },
+      timeout: 60000
+    });
+  } finally {
+    await page.close();
+  }
+}
+
+/**
+ * التحقق من صحة ملف PDF
+ */
+function isValidPDF(buffer) {
+  if (!buffer || buffer.length < 1024) return false;
+  
+  // التحقق من توقيع ملف PDF (البايتات الأولى)
+  const header = buffer.toString('utf8', 0, 4);
+  return header === '%PDF';
+}
+
+/**
+ * إرسال ملف PDF إلى العميل
+ */
+function sendPDFToClient(res, pdfBuffer, filename) {
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+  res.setHeader('Content-Length', pdfBuffer.length);
+  res.setHeader('Cache-Control', 'no-store, max-age=0');
+  res.send(pdfBuffer);
+}
+
+/**
+ * معالجة الأخطاء وإرسال الاستجابة المناسبة
+ */
+function handleErrorResponse(res, error) {
+  const statusCode = error.message.includes('timeout') ? 504 : 500;
+  
+  res.status(statusCode).json({
+    success: false,
+    message: 'فشل إنشاء الفاتورة',
+    error: process.env.NODE_ENV === 'development' ? {
+      message: error.message,
+      stack: error.stack
+    } : undefined
+  });
+}
 
 module.exports = router;

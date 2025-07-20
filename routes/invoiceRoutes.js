@@ -137,7 +137,7 @@ router.get('/generateInvoice/:saleId', async (req, res) => {
     // جلب البيانات
     const [sale, user] = await Promise.all([
       Sale.findById(saleId).lean(),
-      User.findOne().lean().select('name address phone logo')
+      User.findOne().lean().select('name address phone logo.')
     ]);
 
     if (!sale) {

@@ -30,6 +30,7 @@
     "jspdf-autotable": "^3.8.4",
     "mongoose": "^8.16.4",
     "morgan": "^1.10.0",
+    "node-fetch": "^3.3.2",
     "path": "^0.12.7",
     "pdfkit": "^0.17.1",
     "pdfmake": "^0.2.20",

@@ -8,78 +8,98 @@ const router = express.Router();
 
 router.get("/generateInvoice/:saleId", async (req, res) => {
   try {
-    // 1. جلب بيانات عملية البيع من قاعدة البيانات
+    // 1. جلب بيانات عملية البيع
     const sale = await Sale.findById(req.params.saleId);
     if (!sale) {
       return res.status(404).json({ message: "عملية البيع غير موجودة" });
     }
 
-    // 2. جلب بيانات الشركة (المستخدم الأول في النظام)
+    // 2. جلب بيانات الشركة
     const user = await User.findOne();
     if (!user) {
       return res.status(500).json({ message: "بيانات الشركة غير متوفرة" });
     }
 
-    // 3. استيراد مكتبة React-PDF بشكل ديناميكي
+    // 3. استيراد React-PDF
     const ReactPDF = await import("@react-pdf/renderer");
-    const {
-      Document,
-      Page,
-      View,
-      Text,
-      StyleSheet,
-      Image,
-      pdf,
-    } = ReactPDF;
+    const { Document, Page, View, Text, StyleSheet, Image, pdf, Font } = ReactPDF;
 
-    // 4. تعريف مكون الفاتورة
+    // 4. تسجيل خط عربي (هام جداً)
+    // يمكنك استخدام خطوط مثل 'Amiri' أو 'Traditional Arabic'
+    Font.register({
+      family: 'Arabic',
+      src: 'https://fonts.googleapis.com/css2?family=Amiri&display=swap',
+    });
+
+    // 5. تعريف مكون الفاتورة
     function InvoiceDocument({ sale, user }) {
-      // حساب المبلغ الإجمالي
-      const totalAmount = sale.products.reduce(
-        (sum, p) => sum + p.quantity * p.price,
-        0
-      );
-      
-      // تاريخ ووقت إنشاء الفاتورة
-      const now = `${new Date().toLocaleDateString("ar-EG", {
-        timeZone: "Africa/Cairo",
-        hour12: false,
-      })} ${new Date().toLocaleTimeString("ar-EG", {
-        timeZone: "Africa/Cairo",
-        hour12: false,
-      })}`;
-      
-      // رقم فاتورة عشوائي
+      const totalAmount = sale.products.reduce((sum, p) => sum + p.quantity * p.price, 0);
+      const now = new Date().toLocaleString('ar-EG', {
+        timeZone: 'Africa/Cairo',
+        dateStyle: 'short',
+        timeStyle: 'short'
+      });
       const invoiceNumber = `M${Math.floor(1000 + Math.random() * 9000)}`;
-      
-      // التحقق إذا كان اسم الشركة يحتوي على أحرف عربية
-      const isArabic = /[\u0600-\u06FF]/.test(user.name);
 
-      // تعريف التنسيقات
       const styles = StyleSheet.create({
-        page: { fontSize: 12, padding: 20, direction: "rtl" },
+        page: {
+          padding: 40,
+          fontFamily: 'Arabic', // استخدام الخط العربي
+          direction: 'rtl'     // اتجاه النص من اليمين لليسار
+        },
         header: {
-          flexDirection: "row",
-          justifyContent: "space-between",
-          backgroundColor: "#34495e",
-          color: "#ecf0f1",
-          padding: 10,
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          marginBottom: 20,
+          borderBottomWidth: 1,
+          borderBottomColor: '#000',
+          paddingBottom: 10
         },
-        companyInfo: { flexDirection: "column" },
-        logo: { width: 60, height: 60, borderRadius: 30 },
-        section: { marginVertical: 10 },
-        table: { display: "table", width: "auto", marginTop: 10 },
-        tableRow: { flexDirection: "row" },
-        tableCol: { flex: 1, borderWidth: 1, borderColor: "#ddd", padding: 4 },
-        tableCell: { textAlign: "center" },
+        companyInfo: {
+          flexDirection: 'column',
+          textAlign: 'right'
+        },
+        logo: {
+          width: 80,
+          height: 80
+        },
+        invoiceInfo: {
+          marginVertical: 15,
+          textAlign: 'right'
+        },
+        table: {
+          width: '100%',
+          marginVertical: 15,
+          borderWidth: 1,
+          borderColor: '#000'
+        },
+        tableRow: {
+          flexDirection: 'row',
+          borderBottomWidth: 1,
+          borderBottomColor: '#000'
+        },
+        tableHeader: {
+          backgroundColor: '#f0f0f0',
+          fontWeight: 'bold'
+        },
+        tableCell: {
+          padding: 8,
+          flex: 1,
+          textAlign: 'center',
+          borderRightWidth: 1,
+          borderRightColor: '#000'
+        },
         total: {
-          textAlign: "right",
-          marginTop: 10,
-          fontSize: 14,
-          fontWeight: "bold",
+          marginTop: 15,
+          textAlign: 'left',
+          fontWeight: 'bold',
+          fontSize: 16
         },
-        signature: { alignItems: "center", marginTop: 20 },
-        sigText: { fontSize: 24 },
+        footer: {
+          marginTop: 30,
+          textAlign: 'center',
+          fontStyle: 'italic'
+        }
       });
 
       return React.createElement(
@@ -99,93 +119,87 @@ router.get("/generateInvoice/:saleId", async (req, res) => {
               React.createElement(Text, null, `العنوان: ${user.address}`),
               React.createElement(Text, null, `الهاتف: ${user.phone}`)
             ),
-            user.logo &&
-              React.createElement(Image, { style: styles.logo, src: user.logo })
+            user.logo && React.createElement(Image, { style: styles.logo, src: user.logo })
           ),
-          // تفاصيل الفاتورة
+          // معلومات الفاتورة
           React.createElement(
             View,
-            { style: styles.section },
+            { style: styles.invoiceInfo },
             React.createElement(Text, null, `رقم الفاتورة: ${invoiceNumber}`),
-            React.createElement(Text, null, `التاريخ والوقت: ${now}`),
+            React.createElement(Text, null, `التاريخ: ${now}`),
             React.createElement(Text, null, `اسم العميل: ${sale.customerName}`)
           ),
           // جدول المنتجات
           React.createElement(
             View,
             { style: styles.table },
-            // عناوين الجدول
+            // رأس الجدول
             React.createElement(
               View,
-              { style: styles.tableRow },
-              ["المنتج", "الكمية", "السعر", "الإجمالي"].map((hdr) =>
+              { style: [styles.tableRow, styles.tableHeader] },
+              ['المنتج', 'الكمية', 'السعر', 'الإجمالي'].map((header) =>
                 React.createElement(
                   View,
-                  { key: hdr, style: styles.tableCol },
-                  React.createElement(Text, { style: styles.tableCell }, hdr)
+                  { key: header, style: styles.tableCell },
+                  React.createElement(Text, null, header)
                 )
               )
             ),
-            // بيانات المنتجات
-            sale.products.map((p, i) =>
+            // بيانات الجدول
+            sale.products.map((product, index) =>
               React.createElement(
                 View,
-                { key: i, style: styles.tableRow },
-                React.createElement(
-                  View,
-                  { style: styles.tableCol },
-                  React.createElement(Text, { style: styles.tableCell }, p.productName)
-                ),
-                React.createElement(
-                  View,
-                  { style: styles.tableCol },
-                  React.createElement(Text, { style: styles.tableCell }, p.quantity.toString())
-                ),
-                React.createElement(
-                  View,
-                  { style: styles.tableCol },
-                  React.createElement(Text, { style: styles.tableCell }, p.price.toString())
-                ),
-                React.createElement(
-                  View,
-                  { style: styles.tableCol },
-                  React.createElement(Text, { style: styles.tableCell }, (p.quantity * p.price).toString())
+                { key: index, style: styles.tableRow },
+                [
+                  product.productName,
+                  product.quantity.toString(),
+                  product.price.toString(),
+                  (product.quantity * product.price).toString()
+                ].map((value, i) =>
+                  React.createElement(
+                    View,
+                    { key: i, style: styles.tableCell },
+                    React.createElement(Text, null, value)
+                  )
                 )
               )
             )
           ),
-          // المجموع والتوقيع
-          React.createElement(Text, { style: styles.total }, `المجموع: ${totalAmount} جنيه`),
+          // المجموع
+          React.createElement(
+            Text,
+            { style: styles.total },
+            `المجموع الكلي: ${totalAmount} جنيه`
+          ),
+          // تذييل الصفحة
           React.createElement(
             View,
-            { style: styles.signature },
-            React.createElement(Text, null, "—"),
-            React.createElement(Text, { style: styles.sigText, lang: isArabic ? "ar" : "en" }, user.name),
-            React.createElement(Text, null, "شكراً لتعاملكم معنا")
+            { style: styles.footer },
+            React.createElement(Text, null, "شكراً لثقتكم بنا"),
+            React.createElement(Text, null, user.name)
           )
         )
       );
     }
 
-    // 5. توليد PDF وإرساله
+    // 6. توليد وإرسال PDF
     const element = React.createElement(InvoiceDocument, { sale, user });
     const pdfStream = await pdf(element).toBuffer();
 
-    // تجميع الـ chunks في buffer
     const chunks = [];
     for await (const chunk of pdfStream) {
       chunks.push(chunk);
     }
     const pdfBuffer = Buffer.concat(chunks);
 
-    // إعداد رؤوس الاستجابة وإرسال الملف
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `attachment; filename=invoice_${sale._id}.pdf`);
+    res.setHeader("Content-Disposition", `attachment; filename=فاتورة_${sale._id}.pdf`);
     res.setHeader("Content-Length", pdfBuffer.length);
     res.send(pdfBuffer);
+
   } catch (err) {
-    console.error("❌ خطأ أثناء إنشاء الفاتورة:", err);
-    return res.status(500).json({ message: "خطأ في إنشاء الفاتورة" });
+    console.error("❌ خطأ في إنشاء الفاتورة:", err);
+    return res.status(500).json({ message: "حدث خطأ أثناء إنشاء الفاتورة" });
   }
 });
 
